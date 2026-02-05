@@ -1,0 +1,26 @@
+{{- if .Values.persistence.enabled }}
+{{- $pvcName := printf "%s-media" (include "app.fullname" .) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $pvcName }}
+  labels:
+    app: {{ include "app.fullname" . }}
+    chart: {{ include "app.chart" . }}
+  annotations:
+    # CRITICAL: Prevent ArgoCD from deleting PVC with user data
+    # - Prune=false: Never delete this resource during sync
+    # - IgnoreExtraneous: Don't report as out-of-sync for fields Kubernetes sets
+    argocd.argoproj.io/sync-options: Prune=false
+    argocd.argoproj.io/compare-options: IgnoreExtraneous
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}

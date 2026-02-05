@@ -1,0 +1,207 @@
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/ORG/APP
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  # Optional list of imagePullSecrets to use for private registries
+  pullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+# Health check configuration
+healthCheck:
+  enabled: true
+  # Readiness probe (is the app ready to serve traffic?)
+  readiness:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+  # Liveness probe (is the app still running?)
+  liveness:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+# Rolling update strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0  # Zero downtime: keep all pods running during rollout
+
+env: []
+envFromSecret: ""
+
+# Persistent storage for media files (optional)
+# Enable this for applications that need persistent storage (e.g., Django media uploads)
+persistence:
+  enabled: false
+  storageClass: ""  # Use default storage class if empty
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /app/media  # Django media uploads
+  # Additional mount paths (optional)
+  extraMounts: []
+    # - name: additional-storage
+    #   mountPath: /app/data
+    #   size: 5Gi
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 1  # Default to 1 to prevent pod limit overflow (override in app values.yaml if needed)
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  # Advanced scaling policies (only active if maxReplicas > minReplicas)
+  scaleDown:
+    stabilizationWindowSeconds: 300
+    policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+    selectPolicy: Min
+  scaleUp:
+    stabilizationWindowSeconds: 60
+    policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+    selectPolicy: Max
+  # Custom metrics for advanced scaling
+  customMetrics: []
+    # Example custom metrics:
+    # - type: Pods
+    #   metricName: http_requests_per_second
+    #   targetType: AverageValue
+    #   targetAverageValue: 100
+    # - type: Object
+    #   metricName: requests_per_second
+    #   describedObject:
+    #     apiVersion: apps/v1
+    #     kind: Deployment
+    #     name: erp-api
+    #   targetType: Value
+    #   targetValue: 1000
+
+# Vertical Pod Autoscaler configuration
+verticalPodAutoscaling:
+  enabled: true
+  updateMode: "Recreate"  # Options: "Off", "Initial", "Recreate", "Auto"
+  minCPU: 100m
+  maxCPU: 2000m
+  minMemory: 128Mi
+  maxMemory: 4096Mi
+  # Safety mechanisms
+  controlledResources: ["cpu", "memory"]
+  # Control what VPA updates: RequestsOnly or RequestsAndLimits
+  controlledValues: RequestsAndLimits
+  # Recommendation-only mode for safer rollout (overrides updateMode to "Off")
+  recommendationMode: true
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  clusterIssuer: letsencrypt-prod  # cert-manager cluster issuer
+  # Custom annotations (optional, will override defaults)
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-staging
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/rate-limit: "100"
+
+# Pre-deploy cleanup hook (DISABLED by default - use cluster-wide cleanup-cronjob instead)
+# This creates Jobs that consume pods during deployment, wasting cluster resources
+# The cluster has a centralized cleanup-cronjob running every 30 minutes
+cleanup:
+  enabled: false  # Set to true only if app requires pre-deploy cleanup
+
+  hosts:
+    - host: example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - example.com
+      secretName: app-tls
+
+# Prometheus monitoring configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    scrape: true
+    port: 9090
+    path: "/metrics"
+    interval: "30s"
+    labels:
+      app: "{{ include \"app.name\" . }}"
+      release: "{{ .Release.Name }}"
+
+# Service monitor for Prometheus Operator
+serviceMonitor:
+  enabled: true
+  namespace: "monitoring"
+  interval: "30s"
+  scrapeTimeout: "10s"
+  labels:
+    release: "prometheus"
+  selector:
+    matchLabels:
+      app: "{{ include \"app.name\" . }}"
+
+
+# Celery components are disabled by default for generic apps (e.g., UI)
+celeryWorker:
+  enabled: false
+
+celeryBeat:
+  enabled: false
+
+# KEDA ScaledObject configuration (queue-driven autoscaling)
+keda:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 20
+  pollingInterval: 15
+  cooldownPeriod: 120
+  triggers: []
+  # Example triggers:
+  # triggers:
+  #   - type: redis
+  #     metadata:
+  #       address: "redis-master.infra.svc:6379"
+  #       listName: "celery"
+  #       listLength: "100"
+  #     authenticationRef:
+  #       name: redis-auth  # a TriggerAuthentication resource referencing a Secret

@@ -1,0 +1,254 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: infra
+  labels:
+    app: postgresql
+    component: primary
+spec:
+  type: ClusterIP
+  ports:
+    - name: tcp-postgresql
+      port: 5432
+      targetPort: postgresql
+      protocol: TCP
+  selector:
+    app: postgresql
+    component: primary
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-hl
+  namespace: infra
+  labels:
+    app: postgresql
+    component: primary
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: tcp-postgresql
+      port: 5432
+      targetPort: postgresql
+      protocol: TCP
+  selector:
+    app: postgresql
+    component: primary
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-metrics
+  namespace: infra
+  labels:
+    app: postgresql
+    component: metrics
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-metrics
+      port: 9187
+      targetPort: http-metrics
+      protocol: TCP
+  selector:
+    app: postgresql
+    component: primary
+---
+# PriorityClass for database pods (ensures they're scheduled first)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: db-critical
+value: 1000000
+globalDefault: false
+description: "Priority class for critical database pods"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-configuration
+  namespace: infra
+data:
+  postgresql.conf: |
+    # Basic PostgreSQL configuration
+    listen_addresses = '*'
+    port = 5432
+    max_connections = 200
+    
+    # Include additional configuration files
+    include '/etc/postgresql/conf.d/override.conf'
+  override.conf: |
+    # PostgreSQL Performance Tuning for 12GB VPS (3GB container limit)
+    max_connections = 150
+    shared_buffers = 768MB
+    effective_cache_size = 2GB
+    work_mem = 16MB
+    maintenance_work_mem = 256MB
+    checkpoint_completion_target = 0.9
+    wal_buffers = 16MB
+    default_statistics_target = 100
+    random_page_cost = 1.1
+    effective_io_concurrency = 150
+    min_wal_size = 512MB
+    max_wal_size = 2GB
+    
+    # Socket directory
+    unix_socket_directories = '/tmp'
+    
+    # Logging
+    log_timezone = 'UTC'
+    log_statement = 'none'
+    log_duration = off
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init-scripts
+  namespace: infra
+data:
+  01-create-admin-user.sql: |
+    -- Ensure postgres user has superuser privileges
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT FROM pg_user WHERE usename = 'postgres') THEN
+        ALTER USER postgres WITH SUPERUSER CREATEDB CREATEROLE;
+      END IF;
+    END
+    $$;
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: infra
+  labels:
+    app: postgresql
+    component: primary
+spec:
+  serviceName: postgresql-hl
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+      component: primary
+  template:
+    metadata:
+      labels:
+        app: postgresql
+        component: primary
+    spec:
+      priorityClassName: db-critical
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsNonRoot: true
+      containers:
+      - name: postgresql
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: postgresql
+          containerPort: 5432
+          protocol: TCP
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_DB
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql
+              key: postgres-password
+        # Optimized for 12GB RAM / 6-core VPS
+        # Handles: game_stats, metabase databases
+        # ~25% of available app memory for primary database
+        resources:
+          requests:
+            cpu: 250m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 3Gi
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U postgres -d postgres -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U postgres -d postgres -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        - name: config
+          mountPath: /etc/postgresql/conf.d
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+        securityContext:
+          runAsUser: 999
+          runAsNonRoot: true
+      
+      # Prometheus metrics exporter sidecar (lightweight)
+      - name: metrics
+        image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http-metrics
+          containerPort: 9187
+          protocol: TCP
+        env:
+        - name: DATA_SOURCE_URI
+          value: "127.0.0.1:5432/postgres?sslmode=disable"
+        - name: DATA_SOURCE_USER
+          value: postgres
+        - name: DATA_SOURCE_PASS
+          valueFrom:
+            secretKeyRef:
+              name: postgresql
+              key: postgres-password
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+        securityContext:
+          runAsUser: 1000
+          runAsNonRoot: true
+      
+      volumes:
+      - name: config
+        configMap:
+          name: postgresql-configuration
+      - name: init-scripts
+        configMap:
+          name: postgresql-init-scripts
+  
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        app: postgresql
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 20Gi

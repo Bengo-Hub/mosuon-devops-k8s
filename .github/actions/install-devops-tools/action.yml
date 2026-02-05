@@ -1,0 +1,101 @@
+name: Install DevOps Tools
+
+description: 'Reusable composite action to install all required DevOps tools'
+
+inputs:
+  install_trivy:
+    description: 'Install Trivy security scanner'
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install kubectl
+      shell: bash
+      run: |
+        if command -v kubectl &> /dev/null; then
+          echo "✓ kubectl already installed"
+          kubectl version --client=true
+          exit 0
+        fi
+        
+        VER=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+        curl -LO https://dl.k8s.io/release/${VER}/bin/linux/amd64/kubectl
+        sudo install -m 0755 kubectl /usr/local/bin/kubectl
+        kubectl version --client=true
+
+    - name: Install Helm
+      shell: bash
+      run: |
+        if command -v helm &> /dev/null; then
+          echo "✓ Helm already installed"
+          helm version
+          exit 0
+        fi
+        
+        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash || {
+          echo "⚠️ Network connectivity issue - cannot install Helm"
+          echo "This is a transient GitHub Actions infrastructure issue"
+          echo "Please retry the workflow in a few minutes"
+          exit 1
+        }
+        helm version
+
+    - name: Install yq
+      shell: bash
+      run: |
+        if command -v yq &> /dev/null; then
+          echo "✓ yq already installed"
+          yq --version
+          exit 0
+        fi
+        
+        sudo curl -L "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64" -o /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq
+        yq --version
+
+    - name: Install jq
+      shell: bash
+      run: |
+        if command -v jq &> /dev/null; then
+          echo "✓ jq already installed"
+          jq --version
+          exit 0
+        fi
+        
+        sudo apt-get update -y
+        sudo apt-get install jq -y
+        jq --version
+
+    - name: Install Trivy (optional)
+      shell: bash
+      if: ${{ inputs.install_trivy == 'true' }}
+      run: |
+        if command -v trivy &> /dev/null; then
+          echo "✓ Trivy already installed"
+          trivy --version
+          exit 0
+        fi
+        
+        sudo apt-get update -y
+        sudo apt-get install wget apt-transport-https gnupg lsb-release -y
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update -y
+        sudo apt-get install trivy -y
+        trivy --version
+
+    - name: Install ArgoCD CLI
+      shell: bash
+      run: |
+        if command -v argocd &> /dev/null; then
+          echo "✓ ArgoCD CLI already installed"
+          argocd version --client || true
+          exit 0
+        fi
+        
+        ARGOCD_VERSION="v2.13.0"
+        curl -sSL -o /tmp/argocd https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64
+        sudo install -m 0755 /tmp/argocd /usr/local/bin/argocd
+        argocd version --client || true
+        rm -f /tmp/argocd

@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: game-stats-api
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Bengo-Hub/mosuon-devops-k8s.git
+    targetRevision: main
+    path: charts/app
+    helm:
+      valueFiles:
+        - ../../apps/game-stats-api/values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mosuon
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
+  ignoreDifferences:
+    # Deployment replica count - managed by HPA, not Helm
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    # Immutable PVC fields
+    - group: ""
+      kind: PersistentVolumeClaim
+      jsonPointers:
+        - /spec/volumeName
+        - /spec/volumeMode
+        - /status

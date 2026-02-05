@@ -1,0 +1,96 @@
+# Vertical Pod Autoscaler (VPA) Installation for Mosuon Cluster
+# VPA provides automatic resource recommendations and adjustments
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vpa-system
+  labels:
+    app.kubernetes.io/name: vpa
+    app.kubernetes.io/part-of: mosuon
+
+---
+# To install VPA, run:
+# kubectl apply -f https://github.com/kubernetes/autoscaler/releases/download/vertical-pod-autoscaler-1.1.2/vpa-v1.1.2.yaml
+
+# Example VPA for Game Stats API (recommendation mode - safe for production)
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: game-stats-api-vpa
+  namespace: mosuon
+  labels:
+    app: game-stats-api
+    tier: backend
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: game-stats-api
+  updatePolicy:
+    updateMode: "Off"  # Recommendation only; change to "Auto" for automatic updates
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "*"
+      minAllowed:
+        cpu: 100m
+        memory: 256Mi
+      maxAllowed:
+        cpu: 2000m
+        memory: 2Gi
+
+---
+# Example VPA for Game Stats UI (recommendation mode)
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: game-stats-ui-vpa
+  namespace: mosuon
+  labels:
+    app: game-stats-ui
+    tier: frontend
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: game-stats-ui
+  updatePolicy:
+    updateMode: "Off"  # Recommendation only
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "*"
+      minAllowed:
+        cpu: 50m
+        memory: 128Mi
+      maxAllowed:
+        cpu: 1000m
+        memory: 1Gi
+
+---
+# VPA for Metabase Analytics
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: metabase-vpa
+  namespace: infra
+  labels:
+    app: metabase
+    tier: analytics
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: metabase
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendation mode
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "*"
+      minAllowed:
+        cpu: 200m
+        memory: 512Mi
+      maxAllowed:
+        cpu: 2000m
+        memory: 4Gi

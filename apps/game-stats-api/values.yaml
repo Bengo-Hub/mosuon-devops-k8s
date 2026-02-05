@@ -1,0 +1,218 @@
+# Game Stats API Production Configuration
+nameOverride: game-stats-api
+fullnameOverride: game-stats-api
+
+# ============================================================================
+# IMAGE CONFIGURATION
+# ============================================================================
+image:
+  repository: docker.io/codevertex/game-stats-api
+  tag: "latest"
+  pullPolicy: Always
+  pullSecrets:
+    - name: registry-credentials
+
+# ============================================================================
+# REPLICA AND SCALING CONFIGURATION
+# ============================================================================
+replicaCount: 1
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 75
+  # Scale down behavior - conservative to prevent flapping
+  scaleDown:
+    stabilizationWindowSeconds: 300
+    policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    selectPolicy: Min
+  # Scale up behavior - aggressive to handle load spikes
+  scaleUp:
+    stabilizationWindowSeconds: 60
+    policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+    selectPolicy: Max
+
+# VPA Configuration (Vertical Pod Autoscaler)
+verticalPodAutoscaling:
+  enabled: true
+  updateMode: "Off"  # Recommendation mode - observe before enabling auto
+  recommendationMode: true  # Forces Off mode for safety
+  minCPU: 100m
+  maxCPU: 1500m
+  minMemory: 256Mi
+  maxMemory: 1536Mi
+  controlledResources: ["cpu", "memory"]
+  controlledValues: RequestsAndLimits
+
+# ============================================================================
+# SERVICE CONFIGURATION
+# ============================================================================
+service:
+  type: ClusterIP
+  port: 4000
+  targetPort: 4000
+
+# ============================================================================
+# DEPLOYMENT STRATEGY
+# ============================================================================
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+minReadySeconds: 30
+progressDeadlineSeconds: 600
+
+# ============================================================================
+# ENVIRONMENT VARIABLES
+# ============================================================================
+env:
+  - name: ENV
+    value: production
+  - name: PORT
+    value: "4000"
+  - name: LOG_LEVEL
+    value: "info"
+  
+  # Database connection
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: game-stats-api-secrets
+        key: DATABASE_URL
+  
+  # Redis connection
+  - name: REDIS_URL
+    value: redis://redis-master.infra.svc.cluster.local:6379/0
+  - name: REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: game-stats-api-secrets
+        key: REDIS_PASSWORD
+        optional: true
+  
+  # JWT Secret
+  - name: JWT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: game-stats-api-secrets
+        key: JWT_SECRET
+  
+  # Metabase Analytics
+  - name: METABASE_BASE_URL
+    value: "https://analytics.ultimatestats.co.ke"
+  - name: METABASE_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: game-stats-api-secrets
+        key: METABASE_USERNAME
+        optional: true
+  - name: METABASE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: game-stats-api-secrets
+        key: METABASE_PASSWORD
+        optional: true
+  
+  # Ollama AI
+  - name: OLLAMA_BASE_URL
+    value: "http://ollama.infra.svc.cluster.local:11434"
+  - name: OLLAMA_MODEL
+    value: "duckdb-nsql:7b"
+  
+  # Migration settings
+  - name: RUN_MIGRATION
+    value: "true"
+  - name: FIXTURES_DIR
+    value: "./scripts/fixtures"
+
+# ============================================================================
+# RESOURCE LIMITS
+# ============================================================================
+# Optimized for 12GB VPS - Go API:
+# - Database connections and queries
+# - Real-time WebSocket connections
+# - Analytics/Metabase integration
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "768Mi"
+    cpu: "750m"
+
+# ============================================================================
+# HEALTH CHECKS
+# ============================================================================
+healthCheck:
+  enabled: true
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 4000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 4000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# ============================================================================
+# INGRESS CONFIGURATION
+# ============================================================================
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ultimatestats.co.ke"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+  hosts:
+    - host: api.ultimatestats.co.ke
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: game-stats-api-tls
+      hosts:
+        - api.ultimatestats.co.ke
+
+# ============================================================================
+# SERVICE ACCOUNT
+# ============================================================================
+serviceAccount:
+  create: true
+  name: game-stats-api
+
+# ============================================================================
+# PERSISTENCE (for fixtures if needed)
+# ============================================================================
+persistence:
+  enabled: false
+
+# ============================================================================
+# NODE AFFINITY AND TOLERATIONS
+# ============================================================================
+nodeSelector: {}
+tolerations: []
+affinity: {}

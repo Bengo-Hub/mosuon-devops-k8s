@@ -1,0 +1,33 @@
+{{- if .Values.verticalPodAutoscaling.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "app.fullname" . }}
+  labels:
+    app: {{ include "app.name" . }}
+    chart: {{ include "app.chart" . }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: {{ include "app.fullname" . }}
+  updatePolicy:
+    {{- if .Values.verticalPodAutoscaling.recommendationMode }}
+    updateMode: "Off"  # Recommendation-only mode for safety
+    {{- else }}
+    updateMode: {{ .Values.verticalPodAutoscaling.updateMode | default "Recreate" }}
+    {{- end }}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: {{ include "app.name" . }}
+        minAllowed:
+          cpu: {{ .Values.verticalPodAutoscaling.minCPU | default "100m" }}
+          memory: {{ .Values.verticalPodAutoscaling.minMemory | default "128Mi" }}
+        maxAllowed:
+          cpu: {{ .Values.verticalPodAutoscaling.maxCPU | default "2000m" }}
+          memory: {{ .Values.verticalPodAutoscaling.maxMemory | default "4096Mi" }}
+        controlledResources: {{ .Values.verticalPodAutoscaling.controlledResources | default (list "cpu" "memory") | toYaml | nindent 10 }}
+        {{- if .Values.verticalPodAutoscaling.controlledValues }}
+        controlledValues: {{ .Values.verticalPodAutoscaling.controlledValues }}
+        {{- end }}
+{{- end }}

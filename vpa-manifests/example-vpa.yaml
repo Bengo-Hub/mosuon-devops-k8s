@@ -1,0 +1,187 @@
+# Example Vertical Pod Autoscaler Configurations for Mosuon
+# Demonstrates VPA configuration for different use cases
+
+---
+# Example 1: Recommendation-only mode (Safe for production - observe first)
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: example-app-vpa-recommendation
+  namespace: mosuon
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: example-app
+  updatePolicy:
+    updateMode: "Off"  # Only provide recommendations, don't auto-update
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"  # Apply to all containers
+        minAllowed:
+          cpu: 100m
+          memory: 128Mi
+        maxAllowed:
+          cpu: 2000m
+          memory: 4Gi
+        controlledResources: ["cpu", "memory"]
+
+---
+# Example 2: Auto-update mode with recreation (Production-ready after observation)
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: example-app-vpa-auto
+  namespace: mosuon
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: example-app
+  updatePolicy:
+    updateMode: "Recreate"  # Automatically update by recreating pods
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "main-container"  # Specific container
+        minAllowed:
+          cpu: 250m
+          memory: 512Mi
+        maxAllowed:
+          cpu: 4000m
+          memory: 8Gi
+        controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits  # Update both requests and limits
+
+---
+# Example 3: Initial mode (Only update at pod creation - zero disruption)
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: example-app-vpa-initial
+  namespace: mosuon
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: example-app
+  updatePolicy:
+    updateMode: "Initial"  # Only apply recommendations when pod is created
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        minAllowed:
+          cpu: 100m
+          memory: 256Mi
+        maxAllowed:
+          cpu: 2000m
+          memory: 4Gi
+
+---
+# Example 4: CPU-only VPA (Memory managed manually)
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: example-app-vpa-cpu-only
+  namespace: mosuon
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: example-app
+  updatePolicy:
+    updateMode: "Recreate"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        minAllowed:
+          cpu: 100m
+        maxAllowed:
+          cpu: 4000m
+        controlledResources: ["cpu"]  # Only manage CPU
+
+---
+# Example 5: Game Stats API - Production Configuration
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: game-stats-api-vpa-prod
+  namespace: mosuon
+  labels:
+    app: game-stats-api
+    environment: production
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: game-stats-api
+  updatePolicy:
+    updateMode: "Off"  # Start with recommendations, enable "Recreate" after observation
+  resourcePolicy:
+    containerPolicies:
+      - containerName: game-stats-api
+        minAllowed:
+          cpu: 100m
+          memory: 256Mi
+        maxAllowed:
+          cpu: 2000m        # Cap at 2 cores
+          memory: 2048Mi    # Cap at 2GB
+        controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
+
+---
+# Example 6: Game Stats UI - Production Configuration
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: game-stats-ui-vpa-prod
+  namespace: mosuon
+  labels:
+    app: game-stats-ui
+    environment: production
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: game-stats-ui
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: game-stats-ui
+        minAllowed:
+          cpu: 50m
+          memory: 128Mi
+        maxAllowed:
+          cpu: 1000m        # Cap at 1 core (Next.js is lightweight)
+          memory: 1024Mi    # Cap at 1GB
+        controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
+
+---
+# Example 7: Metabase Analytics - Production Configuration
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: metabase-vpa-prod
+  namespace: infra
+  labels:
+    app: metabase
+    environment: production
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: metabase
+  updatePolicy:
+    updateMode: "Off"  # Metabase needs stable resources, use recommendations only
+  resourcePolicy:
+    containerPolicies:
+      - containerName: metabase
+        minAllowed:
+          cpu: 200m
+          memory: 512Mi
+        maxAllowed:
+          cpu: 2000m        # Cap at 2 cores
+          memory: 4096Mi    # Cap at 4GB (Metabase can be memory hungry)
+        controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits

@@ -1,0 +1,195 @@
+# Metabase Analytics Production Configuration
+nameOverride: metabase
+fullnameOverride: metabase
+
+# ============================================================================
+# IMAGE CONFIGURATION
+# ============================================================================
+image:
+  repository: metabase/metabase
+  tag: "v0.50.12"
+  pullPolicy: IfNotPresent
+
+# ============================================================================
+# REPLICA CONFIGURATION
+# ============================================================================
+replicaCount: 1
+
+# HPA Configuration - Metabase typically runs as single instance
+autoscaling:
+  enabled: false  # Disabled - Metabase is stateful and best run as single instance
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 85
+
+# VPA Configuration (Vertical Pod Autoscaler) - Recommended for Metabase
+verticalPodAutoscaling:
+  enabled: true
+  updateMode: "Off"  # Recommendation mode - Metabase needs stable resources
+  recommendationMode: true  # Forces Off mode for safety
+  minCPU: 150m
+  maxCPU: 1500m
+  minMemory: 512Mi
+  maxMemory: 2Gi
+  controlledResources: ["cpu", "memory"]
+  controlledValues: RequestsAndLimits
+
+# ============================================================================
+# SERVICE CONFIGURATION
+# ============================================================================
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+
+# ============================================================================
+# DEPLOYMENT STRATEGY
+# ============================================================================
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+minReadySeconds: 30
+progressDeadlineSeconds: 600
+
+# ============================================================================
+# ENVIRONMENT VARIABLES
+# ============================================================================
+env:
+  # Database configuration (uses shared PostgreSQL)
+  - name: MB_DB_TYPE
+    value: postgres
+  - name: MB_DB_DBNAME
+    value: metabase
+  - name: MB_DB_PORT
+    value: "5432"
+  - name: MB_DB_USER
+    value: metabase_user
+  - name: MB_DB_PASS
+    valueFrom:
+      secretKeyRef:
+        name: metabase-secrets
+        key: MB_DB_PASS
+  - name: MB_DB_HOST
+    value: postgresql.infra.svc.cluster.local
+  
+  # Application settings
+  - name: MB_SITE_URL
+    value: "https://analytics.ultimatestats.co.ke"
+  - name: MB_SITE_NAME
+    value: "Ultimate Stats Analytics"
+  - name: MB_EMBEDDING_SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: metabase-secrets
+        key: MB_EMBEDDING_SECRET_KEY
+  
+  # Performance settings - optimized for 12GB VPS
+  - name: JAVA_OPTS
+    value: "-Xmx1g -Xms512m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
+  - name: MB_JETTY_PORT
+    value: "3000"
+  - name: MB_JETTY_HOST
+    value: "0.0.0.0"
+  
+  # Security settings
+  - name: MB_PASSWORD_COMPLEXITY
+    value: "strong"
+  - name: MB_PASSWORD_LENGTH
+    value: "10"
+  - name: MB_ENABLE_EMBEDDING
+    value: "true"
+  - name: MB_ENABLE_PUBLIC_SHARING
+    value: "true"
+  
+  # Email settings (optional)
+  - name: MB_EMAIL_SMTP_HOST
+    value: ""
+  - name: MB_EMAIL_SMTP_PORT
+    value: ""
+
+# ============================================================================
+# RESOURCE LIMITS
+# ============================================================================
+# Metabase - optimized for 12GB VPS
+# Java-based analytics requiring:
+# - Query execution and caching
+# - Dashboard rendering
+# - Embedding API
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "150m"
+  limits:
+    memory: "1536Mi"
+    cpu: "1000m"
+
+# ============================================================================
+# HEALTH CHECKS
+# ============================================================================
+healthCheck:
+  enabled: true
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 60
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ============================================================================
+# INGRESS CONFIGURATION
+# ============================================================================
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    # Metabase specific optimizations
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "32k"
+  hosts:
+    - host: analytics.ultimatestats.co.ke
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: metabase-tls
+      hosts:
+        - analytics.ultimatestats.co.ke
+
+# ============================================================================
+# SERVICE ACCOUNT
+# ============================================================================
+serviceAccount:
+  create: true
+  name: metabase
+
+# ============================================================================
+# PERSISTENCE
+# ============================================================================
+persistence:
+  enabled: false  # Using PostgreSQL for persistence
+
+# ============================================================================
+# NODE AFFINITY AND TOLERATIONS
+# ============================================================================
+nodeSelector: {}
+tolerations: []
+affinity: {}
