@@ -57,8 +57,8 @@ resolve_token() {
         token="${GIT_TOKEN}"
     elif [[ -n "${GIT_SECRET:-}" ]]; then
         token="${GIT_SECRET}"
-    elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
-        token="${GITHUB_TOKEN}"
+    elif [[ -n "${GIT_TOKEN:-}" ]]; then
+        token="${GIT_TOKEN}"
     fi
     echo "$token"
 }
