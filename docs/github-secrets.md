@@ -202,7 +202,7 @@ kubectl create secret docker-registry registry-credentials \
 
 **Format**: `ghp_` prefix followed by token
 
-**Example**: `ghp_Xk9P2mNqR7vB3wJ8yL4nT6sK1hF5gD9cA0eV`
+**Example**: `ghp_************************************`
 
 **Used By**:
 - Cloning mosuon-devops-k8s repository
