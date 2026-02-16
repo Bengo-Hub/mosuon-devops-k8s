@@ -43,6 +43,9 @@ export GH_PAT="ghp_your_token_here"
 
 ## Step 2: Cluster Provisioning (15 minutes)
 
+> For the required manual VPS and kubeconfig steps (before you run the provisioning workflow) see: `docs/INITIAL-MANUAL-SETUP.md`
+
+
 ### 2.1 Configure GitHub Secrets
 
 In the `mosuon-devops-k8s` repository settings:
