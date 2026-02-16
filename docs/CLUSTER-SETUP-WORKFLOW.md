@@ -4,6 +4,8 @@ Complete step-by-step workflow for setting up the Mosuon Kubernetes cluster from
 
 ## Overview
 
+> Before running the automated provisioning workflows make sure you complete the one-time manual steps described in `INITIAL-MANUAL-SETUP.md` (SSH, kubeconfig, GitHub secrets, optional ingress/cert-manager).
+
 This guide walks through the entire cluster provisioning process, from bare VPS to production-ready Kubernetes cluster running game-stats applications.
 
 **Estimated Time**: 30-45 minutes
