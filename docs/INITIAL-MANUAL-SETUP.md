@@ -39,11 +39,11 @@ Estimated time: 10–25 minutes
 
 ---
 
-## 2) Install lightweight Kubernetes (K3s) — manual
+## 2) Install lightweight Kubernetes (k3s) — manual
 
-The provisioning workflows expect a working kubeconfig. Install K3s now if the cluster isn't already present.
+The provisioning workflows expect a working kubeconfig. Install Kubernetes (k3s is supported) now if the cluster isn't already present.
 
-1. Install K3s (single-node example):
+1. Install k3s (single-node example):
 
    curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644 --disable traefik --disable servicelb
 

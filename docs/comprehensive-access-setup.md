@@ -480,7 +480,7 @@ kubeseal --format=yaml < secret.yaml > sealed-secret.yaml
 ### 4. Enable Audit Logging
 
 ```bash
-# Enable K3s audit logging
+# Enable Kubernetes audit logging (k3s)
 sudo nano /etc/systemd/system/k3s.service
 
 # Add flags:

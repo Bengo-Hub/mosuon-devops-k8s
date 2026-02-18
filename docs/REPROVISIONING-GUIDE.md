@@ -67,6 +67,6 @@ Use this guide when you need to reset the Mosuon cluster and re-run provisioning
 
 ## Notes / differences vs devops-k8s reprovisioning
 
-- Mosuon uses K3s (single-node typical) so some etcd-specific steps are not applicable
+- Mosuon uses Kubernetes (k3s single-node typical) so some etcd-specific steps are not applicable
 - Steps are intentionally conservative—use `--wait=false` for automation-friendly runs
 

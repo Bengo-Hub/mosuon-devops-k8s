@@ -4,7 +4,7 @@ Detailed documentation for the automated infrastructure provisioning workflow.
 
 ## Overview
 
-The provision.yml workflow automates the complete setup of the Mosuon Kubernetes cluster, from bare K3s installation to production-ready infrastructure with all services deployed.
+The provision.yml workflow automates the complete setup of the Mosuon Kubernetes cluster, from a bare Kubernetes (k3s supported) installation to production-ready infrastructure with all services deployed.
 
 **Workflow File**: `.github/workflows/provision.yml`
 **Trigger**: Manual workflow dispatch
@@ -43,9 +43,9 @@ graph TD
 | `GH_PAT` | GitHub Personal Access Token | GitHub Settings → Developer settings → PAT |
 | `JWT_SECRET` | JWT signing secret | `openssl rand -base64 32` |
 
-### Cluster Requirements
+-### Cluster Requirements
 
-- K3s installed on 207.180.237.35
+- Kubernetes (k3s) installed on 207.180.237.35
 - Firewall ports open: 80, 443, 6443
 - Minimum 4GB RAM, 40GB storage
 - Ubuntu 22.04 LTS
