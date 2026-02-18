@@ -111,9 +111,22 @@ update_helm_values() {
         git remote set-url origin "https://x-access-token:${token}@github.com/${DEVOPS_REPO}.git"
     fi
     
-    git fetch origin main 2>/dev/null || true
-    git checkout main 2>/dev/null || true
-    git pull origin main 2>/dev/null || log_warning "Failed to pull latest changes"
+    # Detect the default branch on the remote (supports 'main' or 'master')
+    # Default to 'master' since mosuon-devops-k8s uses 'master' as default branch
+    DEFAULT_BRANCH="master"
+    remote_head=$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p' || true)
+    if [[ -n "$remote_head" ]]; then
+        DEFAULT_BRANCH="$remote_head"
+    else
+        if git rev-parse --verify origin/HEAD >/dev/null 2>&1; then
+            DEFAULT_BRANCH=$(git rev-parse --abbrev-ref origin/HEAD | sed 's@origin/@@') || true
+        fi
+    fi
+
+    log_info "Using default branch: ${DEFAULT_BRANCH}"
+    git fetch origin "${DEFAULT_BRANCH}" 2>/dev/null || true
+    git checkout "${DEFAULT_BRANCH}" 2>/dev/null || true
+    git pull origin "${DEFAULT_BRANCH}" 2>/dev/null || log_warning "Failed to pull latest changes"
     
     # Update image tag in values.yaml
     local values_file="${DEVOPS_DIR}/${values_file_path}"
@@ -144,7 +157,7 @@ update_helm_values() {
     
     git commit -m "chore(${app_name}): update image tag to ${image_tag}"
     
-    git push origin main || { 
+    git push origin "${DEFAULT_BRANCH}" || { 
         log_error "Failed to push changes"
         return 1
     }
