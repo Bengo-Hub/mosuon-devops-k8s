@@ -302,23 +302,24 @@ Login to your DNS provider and add these A records:
 ```
 Type   Name                          Value           TTL
 ────────────────────────────────────────────────────────
-A      stats.ultimatestats.co.ke     207.180.237.35  300
-A      api.stats.ultimatestats.co.ke 207.180.237.35  300
+A      ultimatestats.co.ke     207.180.237.35  300
+A      api.ultimatestats.co.ke 207.180.237.35  300
 A      argocd.ultimatestats.co.ke    207.180.237.35  300
 A      grafana.ultimatestats.co.ke   207.180.237.35  300
-A      superset.ultimatestats.co.ke  207.180.237.35  300
+A      analytics.ultimatestats.co.ke 207.180.237.35  300
 ```
 
 #### 5.2 Verify DNS Propagation
 
 ```bash
 # Check DNS resolution
-nslookup stats.ultimatestats.co.ke
-nslookup api.stats.ultimatestats.co.ke
+
+nslookup ultimatestats.co.ke
+nslookup api.ultimatestats.co.ke
 nslookup argocd.ultimatestats.co.ke
 
 # Or use dig
-dig stats.ultimatestats.co.ke +short
+dig ultimatestats.co.ke +short
 # Should return: 207.180.237.35
 ```
 
@@ -419,8 +420,8 @@ kubectl get ingress -n mosuon
 
 # Should show:
 # NAME              HOSTS                          ADDRESS          PORTS
-# game-stats-api    api.stats.ultimatestats.co.ke  207.180.237.35   80, 443
-# game-stats-ui     stats.ultimatestats.co.ke      207.180.237.35   80, 443
+# game-stats-api    api.ultimatestats.co.ke  207.180.237.35   80, 443
+# game-stats-ui     ultimatestats.co.ke           207.180.237.35   80, 443
 ```
 
 #### 7.4 Check TLS Certificates
@@ -442,16 +443,16 @@ kubectl logs -n cert-manager -l app=cert-manager
 
 ```bash
 # Test API health
-curl https://api.stats.ultimatestats.co.ke/health
+curl https://api.ultimatestats.co.ke/health
 # Expected: {"status":"ok","timestamp":"..."}
 
 # Test UI
-curl -I https://stats.ultimatestats.co.ke
+curl -I https://ultimatestats.co.ke
 # Expected: HTTP/2 200
 
 # Open in browser
-open https://stats.ultimatestats.co.ke
-open https://api.stats.ultimatestats.co.ke/health
+open https://ultimatestats.co.ke
+open https://api.ultimatestats.co.ke/health
 ```
 
 #### 7.6 Check Database Connection

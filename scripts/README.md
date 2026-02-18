@@ -148,7 +148,10 @@ Common environment variables used across scripts:
 | `ENABLE_CLEANUP` | Delete resources before recreating | `false` |
 | `ARGOCD_DOMAIN` | ArgoCD domain | `argocd.ultimatestats.co.ke` |
 | `GRAFANA_DOMAIN` | Grafana domain | `grafana.ultimatestats.co.ke` |
+| `ANALYTICS_DOMAIN` | Analytics (Metabase) domain | `analytics.ultimatestats.co.ke` |
 | `VPS_IP` | VPS IP address | `207.180.237.35` |
+
+Note: This repo does not install RabbitMQ. Mosuon uses Redis and Postgres (with `pgvector`) for caching and embeddings respectively.
 
 ## Usage in Build Scripts
 

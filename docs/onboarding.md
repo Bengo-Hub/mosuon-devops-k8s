@@ -49,7 +49,7 @@ Document your app's needs:
 - **Port**: 3000, 4000, 8080, etc.
 - **Environment Variables**: DATABASE_URL, REDIS_URL, etc.
 - **Secrets**: API keys, JWT secrets, passwords
-- **Dependencies**: PostgreSQL, Redis, RabbitMQ
+- **Dependencies**: PostgreSQL (with pgvector), Redis, Metabase (analytics)
 - **Resources**: CPU/Memory requirements
 - **Health Checks**: /health or /api/health endpoints
 
