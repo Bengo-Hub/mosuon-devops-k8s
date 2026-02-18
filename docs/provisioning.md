@@ -113,8 +113,8 @@ Creates logical partitions for different workload types.
     kubectl create namespace mosuon --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-**Namespaces**:
-- `infra`: PostgreSQL, Redis, RabbitMQ, Superset, Prometheus
+- **Namespaces**:
+- `infra`: PostgreSQL (with pgvector extension), Redis, Metabase, Prometheus + Grafana
 - `argocd`: Argo CD GitOps controller
 - `mosuon`: Application workloads (game-stats-api, game-stats-ui)
 
@@ -485,8 +485,8 @@ kubectl get ingress -A
 # Expected:
 # NAMESPACE   NAME                    HOSTS                          PORTS
 # argocd      argocd-server-ingress   argocd.ultimatestats.co.ke     80, 443
-# mosuon      game-stats-api          api.stats.ultimatestats.co.ke  80, 443
-# mosuon      game-stats-ui           stats.ultimatestats.co.ke      80, 443
+# mosuon      game-stats-api          api.ultimatestats.co.ke        80, 443
+# mosuon      game-stats-ui           ultimatestats.co.ke            80, 443
 ```
 
 ### Check TLS Certificates
@@ -501,10 +501,10 @@ kubectl get certificate -A
 
 ```bash
 # API health check
-curl https://api.stats.ultimatestats.co.ke/health
+curl https://api.ultimatestats.co.ke/health
 
 # UI
-curl -I https://stats.ultimatestats.co.ke
+curl -I https://ultimatestats.co.ke
 
 # ArgoCD
 curl -I https://argocd.ultimatestats.co.ke
@@ -578,7 +578,7 @@ kubectl describe pod postgresql-0 -n infra
 
 ```bash
 # Check DNS is pointing to correct IP
-nslookup api.stats.ultimatestats.co.ke
+nslookup api.ultimatestats.co.ke
 
 # Check cert-manager logs
 kubectl logs -n cert-manager -l app=cert-manager

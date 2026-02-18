@@ -320,7 +320,7 @@ kubectl logs -n mosuon pod-name --previous
 https://grafana.ultimatestats.co.ke
 
 # Application metrics endpoint
-curl https://api.stats.ultimatestats.co.ke/metrics
+curl https://api.ultimatestats.co.ke/metrics
 ```
 
 ## Rollback Procedures
