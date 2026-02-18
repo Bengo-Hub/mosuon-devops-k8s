@@ -66,9 +66,8 @@ jobs:
 
       - name: Install DevOps tools
         uses: ./.github/actions/install-devops-tools
-
-        - name: Configure kubeconfig
-          id: kubeconfig_setup
+      - name: Configure kubeconfig
+        id: kubeconfig_setup
           env:
             KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG }}
           run: |
@@ -102,8 +101,8 @@ jobs:
             fi
             echo "::endgroup::"
 
-        - name: Attempt to fetch kubeconfig via SSH (fallback)
-          if: steps.kubeconfig_setup.outputs.kubeconfig_ready != 'true' && env.SSH_PRIVATE_KEY != ''
+      - name: Attempt to fetch kubeconfig via SSH (fallback)
+        if: steps.kubeconfig_setup.outputs.kubeconfig_ready != 'true' && env.SSH_PRIVATE_KEY != ''
           env:
             SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
             SSH_HOST: ${{ secrets.SSH_HOST || env.SSH_HOST }}
