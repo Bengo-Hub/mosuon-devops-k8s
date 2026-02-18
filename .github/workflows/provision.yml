@@ -3,11 +3,6 @@ name: Provision Mosuon Cluster Infrastructure
 on:
   push:
     branches: [ master ]
-    paths:
-      - 'apps/**'
-      - 'manifests/**'
-      - 'scripts/**'
-      - '.github/workflows/provision.yml'
   workflow_dispatch:
     inputs:
       enable_cleanup:
