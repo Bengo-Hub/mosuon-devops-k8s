@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mosuon-dev-env
+  namespace: mosuon
+type: Opaque
+# All values are base64-encoded (Kubernetes Secret `data:` field)
+# NOTE: Storing secrets in the repo is unsafe — prefer an external secret manager or add this file to .gitignore
+data:
+  CLIENT_ID: SU5ULTEzNzU4Njc0
+  CLIENT_SECRET: ZkRsRnBUOUh2MllnZ2VMaG1mS3hmNWFmSzZPeGJsWUU=
+  API_USERNAME: bW9zdW9uQGdtYWlsLmNvbQ==
+  VPS_PASSWORD: SHlMSzcxQjc5YzVhVXA=
+  VPS_IP: MjA3LjE4MC4yMzcuMzU=
+  ACCOUNT_ID: MTM3NTg2NzQ=
+
+  # Add kubeconfig and SSH private key (base64) after provisioning.
+  # Example to generate base64 on the VPS or locally after scp:
+  #   sudo cat /etc/rancher/k3s/k3s.yaml | base64 -w0
+  #   cat ~/.ssh/id_ed25519 | base64 -w0
+  KUBECONFIG_B64: ""    # paste base64(k3s.yaml) here
+  SSH_PRIVATE_KEY_B64: ""  # paste base64 of your private key here
+
+stringData:
+  # Convenience (optional) — Kubernetes will populate `data:` from these when applied locally.
+  # Keep these empty if you prefer only `data:` to contain secrets.
+  KUBECONFIG_PLACEHOLDER: "paste-base64-kubeconfig-here"
+  SSH_KEY_PLACEHOLDER: "paste-base64-ssh-private-key-here"

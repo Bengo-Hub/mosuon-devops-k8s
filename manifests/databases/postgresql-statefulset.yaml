@@ -117,6 +117,11 @@ data:
       END IF;
     END
     $$;
+  02-init-extensions.sql: |
+    -- Ensure pgvector and common extensions are available in the application DB
+    CREATE EXTENSION IF NOT EXISTS vector;
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -146,7 +151,8 @@ spec:
         runAsNonRoot: true
       containers:
       - name: postgresql
-        image: postgres:15-alpine
+        # Use the project-built image that includes pgvector (PostgreSQL 17)
+        image: codevertex/postgresql-pgvector:latest
         imagePullPolicy: IfNotPresent
         ports:
         - name: postgresql

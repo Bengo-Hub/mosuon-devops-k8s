@@ -22,6 +22,24 @@ scripts/
 
 ## Infrastructure Scripts
 
+### cluster/setup-*.sh
+Idempotent kubeadm-based cluster orchestrator (VPS → containerd → kubeadm → CNI). Useful for single-node or small VPS clusters.
+
+Usage (on VPS):
+
+```bash
+cd /opt/mosuon-devops-k8s
+chmod +x scripts/cluster/*.sh
+./scripts/cluster/setup-cluster.sh
+```
+
+### run-remote-setup.sh
+Local helper that SSHs into the VPS, clones `mosuon-devops-k8s` under `/opt` and runs the cluster orchestrator. Example:
+
+```bash
+./scripts/infrastructure/run-remote-setup.sh root@207.180.237.35
+```
+
 ### install-storage-provisioner.sh
 Installs Rancher local-path-provisioner for dynamic PVC provisioning.
 

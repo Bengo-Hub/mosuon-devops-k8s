@@ -63,25 +63,30 @@ GH_PAT               # GitHub Personal Access Token
 JWT_SECRET           # openssl rand -base64 32
 ```
 
-### 2.2 Generate kubeconfig
+### 2.2 Generate kubeconfig (kubeadm via mosuon-devops-k8s)
 
-SSH into the VPS and install K3s:
+SSH into the VPS and run the `mosuon-devops-k8s` cluster orchestrator (included in this repo):
 
 ```bash
 ssh root@207.180.237.35
+cd /opt
+git clone https://github.com/Bengo-Hub/mosuon-devops-k8s.git || (cd mosuon-devops-k8s && git pull)
+cd mosuon-devops-k8s
+chmod +x scripts/cluster/*.sh
+./scripts/cluster/setup-cluster.sh
+```
 
-# Install K3s
-curl -sfL https://get.k3s.io | sh -s - \
-  --write-kubeconfig-mode 644 \
-  --disable traefik \
-  --disable servicelb
+When the script finishes, copy the kubeconfig produced by kubeadm:
 
-# Get kubeconfig
-cat /etc/rancher/k3s/k3s.yaml
+```bash
+# Copy admin kubeconfig to local workstation
+scp root@207.180.237.35:/etc/kubernetes/admin.conf ~/.kube/mosuon-config
+sed -i 's|server: .*:6443|server: https://207.180.237.35:6443|' ~/.kube/mosuon-config
+KUBECONFIG=~/.kube/mosuon-config kubectl get nodes
 
-# On your local machine, encode it
-cat k3s.yaml | base64 -w 0 > kubeconfig.b64
-# Add the base64 content to KUBE_CONFIG secret
+# Encode and add to GitHub secrets
+cat ~/.kube/mosuon-config | base64 -w 0 > kubeconfig.b64
+# Add content to GitHub secret: KUBE_CONFIG
 ```
 
 ### 2.3 Run Provisioning Workflow
@@ -254,7 +259,7 @@ kubectl describe certificate game-stats-api-tls -n mosuon
 kubectl get pods -n infra -l app=postgresql
 
 # Test connection from pod
-kubectl run -it --rm debug --image=postgres:15 --restart=Never -- \
+kubectl run -it --rm debug --image=postgres:17 --restart=Never -- \
   psql "postgresql://game_stats_user:$POSTGRES_PASSWORD@postgresql.infra:5432/game_stats"
 ```
 

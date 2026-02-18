@@ -454,7 +454,7 @@ spec:
         spec:
           containers:
           - name: backup
-            image: postgres:15
+            image: postgres:17
             command:
             - /bin/sh
             - -c
@@ -698,7 +698,7 @@ kubectl logs -n infra postgresql-0
 kubectl get svc -n infra postgresql
 
 # Test connection from another pod
-kubectl run -it --rm debug --image=postgres:15 --restart=Never -- \
+kubectl run -it --rm debug --image=postgres:17 --restart=Never -- \
   psql "postgresql://postgres:password@postgresql.infra:5432/postgres"
 ```
 

@@ -1,0 +1,72 @@
+#!/bin/bash
+set -euo pipefail
+
+# kubeadm-based Kubernetes installer (Mosuon)
+
+CLUSTER_NAME=${CLUSTER_NAME:-mosuon-prod}
+KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.30}
+POD_NETWORK_CIDR=${POD_NETWORK_CIDR:-192.168.0.0/16}
+
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run as root or with sudo" >&2
+  exit 1
+fi
+
+if ! systemctl is-active --quiet containerd; then
+  echo "containerd not running; run setup-containerd.sh first" >&2
+  exit 1
+fi
+
+# Add Kubernetes apt repo
+if [ ! -f /etc/apt/sources.list.d/kubernetes.list ]; then
+  mkdir -p /etc/apt/keyrings
+  curl -fsSL https://pkgs.k8s.io/core:/stable:/v${KUBERNETES_VERSION}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg || true
+  echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v${KUBERNETES_VERSION}/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
+fi
+
+apt-get update -y
+apt-get install -y kubelet kubeadm kubectl || true
+apt-mark hold kubelet kubeadm kubectl 2>/dev/null || true
+systemctl enable --now kubelet || true
+
+# Initialize cluster if not already
+if [ -f /etc/kubernetes/admin.conf ]; then
+  echo "Kubernetes already initialized"
+else
+  APISERVER_ADVERTISE_ADDRESS=$(hostname -I | awk '{print $1}')
+  kubeadm init --pod-network-cidr="${POD_NETWORK_CIDR}" --apiserver-advertise-address="${APISERVER_ADVERTISE_ADDRESS}" --kubernetes-version="v${KUBERNETES_VERSION}.0" || true
+fi
+
+# configure kubectl for root and ubuntu user
+mkdir -p $HOME/.kube
+if [ -f /etc/kubernetes/admin.conf ] && [ ! -f $HOME/.kube/config ]; then
+  cp /etc/kubernetes/admin.conf $HOME/.kube/config || true
+  chown $(id -u):$(id -g) $HOME/.kube/config || true
+fi
+if id "ubuntu" &>/dev/null; then
+  mkdir -p /home/ubuntu/.kube
+  cp /etc/kubernetes/admin.conf /home/ubuntu/.kube/config || true
+  chown -R ubuntu:ubuntu /home/ubuntu/.kube || true
+fi
+
+# Allow pods on master (single-node)
+if kubectl get nodes >/dev/null 2>&1; then
+  kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true
+fi
+
+# Install Calico CNI (idempotent)
+if kubectl get namespace calico-system >/dev/null 2>&1; then
+  echo "Calico already installed"
+else
+  kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml 2>/dev/null || true
+  sleep 5
+  kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/custom-resources.yaml 2>/dev/null || true
+  sleep 10
+fi
+
+# Update kubeconfig server address if VPS_IP provided
+if [ -n "${VPS_IP:-}" ] && [ -f "$HOME/.kube/config" ]; then
+  sed -i "s|server: https://.*:6443|server: https://${VPS_IP}:6443|" $HOME/.kube/config || true
+fi
+
+echo "Kubernetes setup complete"
