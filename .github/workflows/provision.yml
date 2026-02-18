@@ -2,7 +2,7 @@ name: Provision Mosuon Cluster Infrastructure
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
     paths:
       - 'apps/**'
       - 'manifests/**'
