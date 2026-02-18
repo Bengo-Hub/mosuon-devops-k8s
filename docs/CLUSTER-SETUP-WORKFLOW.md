@@ -16,7 +16,7 @@ This guide walks through the entire cluster provisioning process, from bare VPS 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  VPS: 207.180.237.35                                        │
-│  ├── K3s (Lightweight Kubernetes)                           │
+│  ├── Kubernetes (kubeadm-based, managed by devops-k8s)      │
 │  ├── NGINX Ingress (HTTP/HTTPS routing)                     │
 │  ├── cert-manager (TLS certificates)                        │
 │  ├── ArgoCD (GitOps deployment)                             │
@@ -96,23 +96,35 @@ apt-get update && apt-get upgrade -y
 apt-get install -y curl wget git openssl
 ```
 
-#### 1.2 Install K3s
+#### 1.2 Install Kubernetes (kubeadm via mosuon-devops-k8s)
+
+Mosuon uses a kubeadm-based cluster orchestrator included in this repository. The orchestrator installs containerd, initializes Kubernetes (kubeadm), configures a CNI and generates a kubeconfig for GitHub Actions.
+
+On the VPS run:
 
 ```bash
-# Install K3s (lightweight Kubernetes)
-curl -sfL https://get.k3s.io | sh -s - \
-  --write-kubeconfig-mode 644 \
-  --disable traefik \
-  --disable servicelb \
-  --node-label role=worker
+# SSH into the VPS
+ssh root@207.180.237.35
 
-# Verify installation
+# Clone the mosuon-devops-k8s repo (recommended location: /opt)
+cd /opt
+git clone https://github.com/Bengo-Hub/mosuon-devops-k8s.git || (cd mosuon-devops-k8s && git pull)
+cd mosuon-devops-k8s
+
+# Run the orchestrated cluster setup (setup-vps, containerd, kubeadm, CNI)
+chmod +x scripts/cluster/*.sh
+./scripts/cluster/setup-cluster.sh
+
+# Verify node(s)
 kubectl get nodes
-
-# Should show:
-# NAME     STATUS   ROLES                  AGE   VERSION
-# host     Ready    control-plane,master   30s   v1.28.x+k3s1
+# Expected: one node with STATUS=Ready
 ```
+
+Notes:
+- The `setup-cluster.sh` script is idempotent and tuned for Ubuntu 24.04 LTS (recommended).
+- For small single-VPS deployments the orchestrator will provision a control-plane node and make the kubeconfig available at `/etc/kubernetes/admin.conf`.
+- If you prefer to run steps manually, see `docs/INITIAL-MANUAL-SETUP.md` for the low-level kubeadm instructions.
+
 
 #### 1.3 Configure Firewall
 
@@ -130,23 +142,21 @@ ufw status
 
 ### Phase 2: Local kubeconfig Setup (3 minutes)
 
-#### 2.1 Get kubeconfig from VPS
+#### 2.1 Get kubeconfig from VPS (kubeadm)
 
 ```bash
-# On VPS, copy kubeconfig content
-cat /etc/rancher/k3s/k3s.yaml
+# On VPS (after setup-cluster.sh finishes), the kubeconfig will be available at:
+#   /etc/kubernetes/admin.conf
+# Copy it to your workstation and update the server address to the VPS public IP:
+scp root@207.180.237.35:/etc/kubernetes/admin.conf ~/.kube/mosuon-config
+sed -i 's|server: .*:6443|server: https://207.180.237.35:6443|' ~/.kube/mosuon-config
 
-# On local machine, save to file
-scp root@207.180.237.35:/etc/rancher/k3s/k3s.yaml ~/.kube/mosuon-config
+# Test connectivity (use explicit kubeconfig)
+KUBECONFIG=~/.kube/mosuon-config kubectl get nodes
 
-# Update server address
-sed -i 's/127.0.0.1/207.180.237.35/' ~/.kube/mosuon-config
-
-# Set as active kubeconfig
-export KUBECONFIG=~/.kube/mosuon-config
-
-# Test connection
-kubectl get nodes
+# Base64-encode the kubeconfig (single-line) for GitHub secret
+cat ~/.kube/mosuon-config | base64 -w 0 > kubeconfig.b64
+# Paste content of kubeconfig.b64 into GitHub secret named: KUBE_CONFIG
 ```
 
 #### 2.2 Create GitHub Secret

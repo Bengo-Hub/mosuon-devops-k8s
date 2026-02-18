@@ -221,14 +221,19 @@ choco install kubernetes-cli
 kubectl version --client
 ```
 
-### Get kubeconfig from K3s
+### Get kubeconfig (kubeadm)
 
 ```bash
 # SSH into VPS
 ssh mosuon-prod
 
-# K3s kubeconfig location
-sudo cat /etc/rancher/k3s/k3s.yaml
+# kubeadm admin kubeconfig location
+sudo cat /etc/kubernetes/admin.conf
+
+# Copy to local machine
+scp root@207.180.237.35:/etc/kubernetes/admin.conf ~/.kube/mosuon-config
+sed -i 's|server: .*:6443|server: https://207.180.237.35:6443|' ~/.kube/mosuon-config
+KUBECONFIG=~/.kube/mosuon-config kubectl get nodes
 ```
 
 ### Configure Local kubectl

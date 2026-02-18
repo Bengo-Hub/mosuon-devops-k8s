@@ -304,7 +304,7 @@ kubectl describe pod -n mosuon -l app=your-app-name
 
 ```bash
 # Test database connectivity
-kubectl run -it --rm debug --image=postgres:15 --restart=Never -- \
+kubectl run -it --rm debug --image=postgres:17 --restart=Never -- \
   psql "postgresql://your_app_user:password@postgresql.infra:5432/your_app"
 ```
 
