@@ -8,11 +8,11 @@ Complete guide for DNS, ingress, and TLS certificate management on the Mosuon cl
 
 ```
 ultimatestats.co.ke (207.180.237.35)
-├── stats.ultimatestats.co.ke → Frontend (Next.js PWA)
-├── api.stats.ultimatestats.co.ke → Backend API (Go/Chi)
+├── ultimatestats.co.ke → Frontend (Next.js PWA)
+├── api.ultimatestats.co.ke → Backend API (Go/Chi)
 ├── argocd.ultimatestats.co.ke → ArgoCD Dashboard
 ├── grafana.ultimatestats.co.ke → Grafana Monitoring
-├── superset.ultimatestats.co.ke → Superset Analytics
+├── analytics.ultimatestats.co.ke → Metabase Analytics
 └── prometheus.ultimatestats.co.ke → Prometheus Metrics
 ```
 
@@ -22,7 +22,8 @@ ultimatestats.co.ke (207.180.237.35)
 *.ultimatestats.co.ke
 ├── postgresql.infra (internal only)
 ├── redis-master.infra (internal only)
-├── rabbitmq.infra (internal only)
+├── (no RabbitMQ) - Mosuon does not use RabbitMQ; use Redis and direct DB-backed jobs
+├── pgvector (Postgres extension for vector embeddings; internal)
 ├── nats.messaging (internal only)
 └── ollama.infra (internal only)
 ```
@@ -38,13 +39,13 @@ Point all subdomains to the cluster IP:
 ultimatestats.co.ke.              A    207.180.237.35
 
 ; Application domains
-stats.ultimatestats.co.ke.        A    207.180.237.35
-api.stats.ultimatestats.co.ke.    A    207.180.237.35
+ultimatestats.co.ke.              A    207.180.237.35
+api.ultimatestats.co.ke.          A    207.180.237.35
 
 ; Infrastructure domains
 argocd.ultimatestats.co.ke.       A    207.180.237.35
 grafana.ultimatestats.co.ke.      A    207.180.237.35
-superset.ultimatestats.co.ke.     A    207.180.237.35
+analytics.ultimatestats.co.ke.    A    207.180.237.35
 prometheus.ultimatestats.co.ke.   A    207.180.237.35
 ```
 
@@ -65,8 +66,8 @@ prometheus.ultimatestats.co.ke.   A    207.180.237.35
 ### CNAME Records (Alternative)
 
 ```dns
-stats.ultimatestats.co.ke.        CNAME  @
-api.stats.ultimatestats.co.ke.    CNAME  @
+ultimatestats.co.ke.              CNAME  @
+api.ultimatestats.co.ke.          CNAME  @
 argocd.ultimatestats.co.ke.       CNAME  @
 grafana.ultimatestats.co.ke.      CNAME  @
 ```
@@ -227,10 +228,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - stats.ultimatestats.co.ke
+      - ultimatestats.co.ke
       secretName: game-stats-ui-tls
   rules:
-    - host: stats.ultimatestats.co.ke
+    - host: ultimatestats.co.ke
       http:
         paths:
           - path: /
@@ -258,17 +259,17 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://stats.ultimatestats.co.ke"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ultimatestats.co.ke"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - api.stats.ultimatestats.co.ke
+      - api.ultimatestats.co.ke
       secretName: game-stats-api-tls
   rules:
-    - host: api.stats.ultimatestats.co.ke
+    - host: api.ultimatestats.co.ke
       http:
         paths:
           - path: /
@@ -414,7 +415,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/ZONE_ID/dns_records" \
   -H "Content-Type: application/json" \
   --data '{
     "type": "A",
-    "name": "stats.ultimatestats.co.ke",
+    "name": "ultimatestats.co.ke",
     "content": "207.180.237.35",
     "ttl": 120,
     "proxied": false
@@ -442,7 +443,7 @@ aws route53 change-resource-record-sets \
     "Changes": [{
       "Action": "CREATE",
       "ResourceRecordSet": {
-        "Name": "stats.ultimatestats.co.ke",
+        "Name": "ultimatestats.co.ke",
         "Type": "A",
         "TTL": 300,
         "ResourceRecords": [{"Value": "207.180.237.35"}]
@@ -463,26 +464,26 @@ kubectl get pods -n ingress-nginx
 kubectl get ingress -A
 
 # Test HTTP redirect
-curl -I http://stats.ultimatestats.co.ke
+curl -I http://ultimatestats.co.ke
 
 # Test HTTPS
-curl -I https://stats.ultimatestats.co.ke
+curl -I https://ultimatestats.co.ke
 
 # Test with specific host header (before DNS)
-curl -H "Host: stats.ultimatestats.co.ke" http://207.180.237.35:30080
+curl -H "Host: ultimatestats.co.ke" http://207.180.237.35:30080
 ```
 
 ### Certificate Validation
 
 ```bash
 # Check certificate expiry
-openssl s_client -connect stats.ultimatestats.co.ke:443 -servername stats.ultimatestats.co.ke | openssl x509 -noout -dates
+openssl s_client -connect ultimatestats.co.ke:443 -servername ultimatestats.co.ke | openssl x509 -noout -dates
 
 # Verify certificate chain
-openssl s_client -connect stats.ultimatestats.co.ke:443 -servername stats.ultimatestats.co.ke -showcerts
+openssl s_client -connect ultimatestats.co.ke:443 -servername ultimatestats.co.ke -showcerts
 
 # Check SSL Labs rating
-# Visit: https://www.ssllabs.com/ssltest/analyze.html?d=stats.ultimatestats.co.ke
+# Visit: https://www.ssllabs.com/ssltest/analyze.html?d=ultimatestats.co.ke
 ```
 
 ## Monitoring & Metrics
@@ -515,10 +516,10 @@ Key panels:
 
 ```bash
 # Check DNS propagation
-dig stats.ultimatestats.co.ke +short
+dig ultimatestats.co.ke +short
 
 # Check from external resolver
-dig @8.8.8.8 stats.ultimatestats.co.ke +short
+dig @8.8.8.8 ultimatestats.co.ke +short
 
 # Flush local DNS cache (client)
 sudo systemd-resolve --flush-caches
@@ -537,7 +538,7 @@ kubectl describe certificaterequest -n mosuon
 kubectl get challenges -A
 
 # Manually verify challenge
-curl http://stats.ultimatestats.co.ke/.well-known/acme-challenge/TOKEN
+curl http://ultimatestats.co.ke/.well-known/acme-challenge/TOKEN
 ```
 
 ### 502 Bad Gateway

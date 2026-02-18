@@ -72,17 +72,17 @@ mosuon-devops-k8s/
 │  │  │  ┌──────────────────┐  ┌──────────────────┐     │  │  │
 │  │  │  │ game-stats-api   │  │ game-stats-ui    │     │  │  │
 │  │  │  │ (Go Backend)     │  │ (Next.js PWA)    │     │  │  │
-│  │  │  │ Port: 8080       │  │ Port: 3000       │     │  │  │
+│  │  │  │ Port: 4000       │  │ Port: 3000       │     │  │  │
 │  │  │  └──────────────────┘  └──────────────────┘     │  │  │
 │  │  └─────────────────────────────────────────────────┘  │  │
 │  │  ┌─────────────────────────────────────────────────┐  │  │
 │  │  │  Namespace: infra                                │  │  │
 │  │  │  ┌────────────┐  ┌────────┐  ┌──────────┐       │  │  │
-│  │  │  │ PostgreSQL │  │ Redis  │  │ RabbitMQ │       │  │  │
+│  │  │  │ PostgreSQL │  │ Redis  │  │ Metabase │       │  │  │
 │  │  │  └────────────┘  └────────┘  └──────────┘       │  │  │
-│  │  │  ┌──────────┐  ┌────────────┐                   │  │  │
-│  │  │  │ Superset │  │ Prometheus │                   │  │  │
-│  │  │  └──────────┘  └────────────┘                   │  │  │
+│  │  │  ┌──────────┐  ┌──────────────────────────┐     │  │  │
+│  │  │  │ pgvector │  │ Prometheus + Grafana     │     │  │  │
+│  │  │  └──────────┘  └──────────────────────────┘     │  │  │
 │  │  └─────────────────────────────────────────────────┘  │  │
 │  │  ┌─────────────────────────────────────────────────┐  │  │
 │  │  │  Namespace: argocd                               │  │  │
@@ -109,8 +109,8 @@ To add a new application to the Mosuon cluster:
 ### Shared Services (infra namespace)
 - **PostgreSQL** - Shared database with per-service databases
 - **Redis** - Caching and sessions
-- **RabbitMQ** - Message queue
-- **Superset** - Data analytics platform
+- **Metabase** - Data analytics platform (analytics.ultimatestats.co.ke)
+- **pgvector** - PostgreSQL extension for vector embeddings (used by analytics features)
 - **Prometheus + Grafana** - Monitoring stack
 
 ### Per-Service Databases
@@ -146,8 +146,8 @@ Developer Push → GitHub Actions → Build Image → Push to Registry
 
 - **ArgoCD**: https://argocd.ultimatestats.co.ke
 - **Grafana**: https://grafana.ultimatestats.co.ke
-- **Game Stats UI**: https://stats.ultimatestats.co.ke
-- **Game Stats API**: https://api.stats.ultimatestats.co.ke
+- **Game Stats UI**: https://ultimatestats.co.ke
+- **Game Stats API**: https://api.ultimatestats.co.ke
 
 ## Support
 

@@ -112,11 +112,11 @@ This installs:
 Add A records to your DNS provider:
 
 ```
-stats.ultimatestats.co.ke        A    207.180.237.35
-api.stats.ultimatestats.co.ke    A    207.180.237.35
+ultimatestats.co.ke               A    207.180.237.35
+api.ultimatestats.co.ke           A    207.180.237.35
 argocd.ultimatestats.co.ke       A    207.180.237.35
 grafana.ultimatestats.co.ke      A    207.180.237.35
-superset.ultimatestats.co.ke     A    207.180.237.35
+analytics.ultimatestats.co.ke    A    207.180.237.35
 ```
 
 Wait 5-10 minutes for DNS propagation.
@@ -175,10 +175,10 @@ kubectl get pods -n argocd
 kubectl get ingress -n mosuon
 
 # Test API health
-curl https://api.stats.ultimatestats.co.ke/health
+curl https://api.ultimatestats.co.ke/health
 
 # Visit UI
-open https://stats.ultimatestats.co.ke
+open https://ultimatestats.co.ke
 ```
 
 ### 5.3 Check TLS Certificates

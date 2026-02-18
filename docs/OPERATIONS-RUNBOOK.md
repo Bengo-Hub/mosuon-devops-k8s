@@ -110,8 +110,8 @@ graph TD
    # Check all applications
    kubectl get pods -A | grep -v Running
    
-   # Check ingress
-   curl -I https://stats.ultimatestats.co.ke
+  # Check ingress
+  curl -I https://ultimatestats.co.ke
    
    # Check databases
    kubectl exec -n infra postgresql-0 -- pg_isready
@@ -186,7 +186,7 @@ kubectl rollout restart deployment/game-stats-api -n mosuon
 
 # Update ConfigMap
 kubectl create configmap game-stats-ui-config \
-  --from-literal=NEXT_PUBLIC_API_URL=https://api.stats.ultimatestats.co.ke \
+  --from-literal=NEXT_PUBLIC_API_URL=https://api.ultimatestats.co.ke \
   --namespace=mosuon \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
@@ -478,8 +478,8 @@ kubectl get pods -A | grep -v Running
 kubectl get applications -n argocd
 
 # 3. Test critical endpoints
-curl -I https://stats.ultimatestats.co.ke
-curl -I https://api.stats.ultimatestats.co.ke/health
+curl -I https://ultimatestats.co.ke
+curl -I https://api.ultimatestats.co.ke/health
 
 # 4. Run health check script
 ./scripts/daily-health-check.sh
