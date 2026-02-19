@@ -40,29 +40,30 @@ mkdir -p "${MANIFESTS_DIR}"
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf \"${TEMP_DIR}\"" EXIT
 
-log_info "Downloading VPA component manifests (version ${VPA_VERSION})"
+log_info "Preparing VPA manifest at ${VPA_MANIFEST}"
+rm -f "$VPA_MANIFEST"
+touch "$VPA_MANIFEST"
+
 for component in "${COMPONENTS[@]}"; do
   target="${TEMP_DIR}/${component}"
   url="${VPA_BASE_URL}/${component}"
   if curl -fsSL "$url" -o "$target"; then
     log_success "Downloaded ${component}"
-    continue
+  else
+    alt_component="$(echo "$component" | sed 's/-gen//g')"
+    alt_url="${VPA_BASE_URL}/${alt_component}"
+    if curl -fsSL "$alt_url" -o "$target"; then
+      log_success "Downloaded ${component} via ${alt_component}"
+    else
+      log_error "Failed to download ${component} from ${url}"
+      exit 1
+    fi
   fi
 
-  # Try a simplified name in case upstream dropped the suffix
-  alt_component="$(echo "$component" | sed 's/-gen//g')"
-  alt_url="${VPA_BASE_URL}/${alt_component}"
-  if curl -fsSL "$alt_url" -o "$target"; then
-    log_success "Downloaded ${component} via ${alt_component}"
-    continue
-  fi
-
-  log_warning "Failed to download ${component} (${url})"
-  rm -f "$target"
+  cat "$target" >> "$VPA_MANIFEST"
+  printf "\n" >> "$VPA_MANIFEST"
 done
 
-log_info "Building consolidated manifest at ${VPA_MANIFEST}"
-cat "${TEMP_DIR}"/*.yaml > "$VPA_MANIFEST" || true
 if [ ! -s "$VPA_MANIFEST" ]; then
   log_error "Combined VPA manifest is empty"
   exit 1
