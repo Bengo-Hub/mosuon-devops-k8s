@@ -1,22 +1,19 @@
 # Game Stats API Production Configuration
 nameOverride: game-stats-api
 fullnameOverride: game-stats-api
-
 # ============================================================================
 # IMAGE CONFIGURATION
 # ============================================================================
 image:
   repository: docker.io/codevertex/game-stats-api
-  tag: "latest"
+  tag: "02babf95"
   pullPolicy: Always
   pullSecrets:
     - name: registry-credentials
-
 # ============================================================================
 # REPLICA AND SCALING CONFIGURATION
 # ============================================================================
 replicaCount: 1
-
 autoscaling:
   enabled: true
   minReplicas: 1
@@ -42,19 +39,17 @@ autoscaling:
         value: 2
         periodSeconds: 60
     selectPolicy: Max
-
 # VPA Configuration (Vertical Pod Autoscaler)
 verticalPodAutoscaling:
   enabled: true
-  updateMode: "Off"  # Recommendation mode - observe before enabling auto
-  recommendationMode: true  # Forces Off mode for safety
+  updateMode: "Off" # Recommendation mode - observe before enabling auto
+  recommendationMode: true # Forces Off mode for safety
   minCPU: 100m
   maxCPU: 1500m
   minMemory: 256Mi
   maxMemory: 1536Mi
   controlledResources: ["cpu", "memory"]
   controlledValues: RequestsAndLimits
-
 # ============================================================================
 # SERVICE CONFIGURATION
 # ============================================================================
@@ -62,7 +57,6 @@ service:
   type: ClusterIP
   port: 4000
   targetPort: 4000
-
 # ============================================================================
 # DEPLOYMENT STRATEGY
 # ============================================================================
@@ -71,10 +65,8 @@ strategy:
   rollingUpdate:
     maxSurge: 1
     maxUnavailable: 0
-
 minReadySeconds: 30
 progressDeadlineSeconds: 600
-
 # ============================================================================
 # ENVIRONMENT VARIABLES
 # ============================================================================
@@ -85,14 +77,12 @@ env:
     value: "4000"
   - name: LOG_LEVEL
     value: "info"
-  
   # Database connection
   - name: DATABASE_URL
     valueFrom:
       secretKeyRef:
         name: game-stats-api-secrets
         key: DATABASE_URL
-  
   # Redis connection
   - name: REDIS_URL
     value: redis://redis-master.infra.svc.cluster.local:6379/0
@@ -102,14 +92,12 @@ env:
         name: game-stats-api-secrets
         key: REDIS_PASSWORD
         optional: true
-  
   # JWT Secret
   - name: JWT_SECRET
     valueFrom:
       secretKeyRef:
         name: game-stats-api-secrets
         key: JWT_SECRET
-  
   # Metabase Analytics
   - name: METABASE_BASE_URL
     value: "https://analytics.ultimatestats.co.ke"
@@ -125,19 +113,16 @@ env:
         name: game-stats-api-secrets
         key: METABASE_PASSWORD
         optional: true
-  
   # Ollama AI
   - name: OLLAMA_BASE_URL
     value: "http://ollama.infra.svc.cluster.local:11434"
   - name: OLLAMA_MODEL
     value: "duckdb-nsql:7b"
-  
   # Migration settings
   - name: RUN_MIGRATION
     value: "true"
   - name: FIXTURES_DIR
     value: "./scripts/fixtures"
-
 # ============================================================================
 # RESOURCE LIMITS
 # ============================================================================
@@ -152,7 +137,6 @@ resources:
   limits:
     memory: "768Mi"
     cpu: "750m"
-
 # ============================================================================
 # HEALTH CHECKS
 # ============================================================================
@@ -174,7 +158,6 @@ healthCheck:
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 3
-
 # ============================================================================
 # INGRESS CONFIGURATION
 # ============================================================================
@@ -196,20 +179,17 @@ ingress:
     - secretName: game-stats-api-tls
       hosts:
         - api.ultimatestats.co.ke
-
 # ============================================================================
 # SERVICE ACCOUNT
 # ============================================================================
 serviceAccount:
   create: true
   name: game-stats-api
-
 # ============================================================================
 # PERSISTENCE (for fixtures if needed)
 # ============================================================================
 persistence:
   enabled: false
-
 # ============================================================================
 # NODE AFFINITY AND TOLERATIONS
 # ============================================================================
