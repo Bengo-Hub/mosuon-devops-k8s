@@ -338,45 +338,6 @@ jobs:
           kubectl get applications -n argocd || true
           echo "::endgroup::"
 
-      - name: Install Monitoring (Prometheus + Grafana)
-        if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
-        timeout-minutes: 20
-        continue-on-error: true
-        env:
-          GRAFANA_DOMAIN: ${{ env.GRAFANA_DOMAIN }}
-          NAMESPACE: ${{ env.MONITORING_NAMESPACE }}
-        run: |
-          echo "::group::Installing Monitoring Stack"
-          
-          # Add Prometheus community Helm repo
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-          helm repo update
-          
-          # Install kube-prometheus-stack
-          if kubectl get ingress -n "${NAMESPACE}" monitoring-grafana >/dev/null 2>&1; then
-            echo "Existing Grafana ingress found; deleting to avoid duplicate host definition"
-            kubectl delete ingress monitoring-grafana -n "${NAMESPACE}" --ignore-not-found
-          fi
-          helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
-            --namespace "${NAMESPACE}" \
-            --set grafana.enabled=true \
-            --set grafana.ingress.enabled=true \
-            --set grafana.ingress.ingressClassName=nginx \
-            --set grafana.ingress.hosts[0]="${GRAFANA_DOMAIN}" \
-            --set grafana.ingress.tls[0].hosts[0]="${GRAFANA_DOMAIN}" \
-            --set grafana.ingress.tls[0].secretName=grafana-tls \
-            --set "grafana.ingress.annotations.cert-manager\\.io/cluster-issuer=letsencrypt-prod" \
-            --set prometheus.prometheusSpec.retention=7d \
-            --set prometheus.prometheusSpec.resources.requests.memory=256Mi \
-            --set prometheus.prometheusSpec.resources.limits.memory=512Mi \
-            --wait --timeout=15m || {
-              echo "⚠️  Monitoring installation encountered issues"
-              echo "Will continue - monitoring can sync later via ArgoCD"
-            }
-          
-          echo "✅ Monitoring stack installed"
-          echo "::endgroup::"
-
       - name: Verify Ingress Configuration
         if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
         continue-on-error: true
