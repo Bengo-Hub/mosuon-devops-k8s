@@ -62,7 +62,15 @@ else
   kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml 2>/dev/null || true
   sleep 5
   kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/custom-resources.yaml 2>/dev/null || true
-  sleep 10
+
+  echo "Waiting for Calico pods to become Ready"
+  CNI_TIMEOUT=${CNI_TIMEOUT:-300}
+  if ! kubectl wait --for=condition=Ready pods -n calico-system --all --timeout=${CNI_TIMEOUT}s >/dev/null 2>&1; then
+    echo "⚠️ Calico pods did not reach Ready within ${CNI_TIMEOUT} seconds"
+    kubectl get pods -n calico-system
+  else
+    echo "Calico CNI is ready"
+  fi
 fi
 
 # Update kubeconfig server address if VPS_IP provided

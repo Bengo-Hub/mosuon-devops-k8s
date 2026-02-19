@@ -178,22 +178,41 @@ jobs:
           echo "✅ Registry credentials setup complete"
           echo "::endgroup::"
 
-      - name: Check cluster health
+      - name: Check cluster health and readiness
         if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
         run: |
           echo "::group::Cluster Health Check"
           echo "Checking cluster status..."
-          
+
           kubectl get nodes || true
           READY_NODES=$(kubectl get nodes --no-headers 2>/dev/null | grep -c "Ready" || echo "0")
           TOTAL_NODES=$(kubectl get nodes --no-headers 2>/dev/null | wc -l || echo "0")
-          
+
           if [ "$READY_NODES" -eq 0 ] && [ "$TOTAL_NODES" -gt 0 ]; then
             echo "⚠️  Warning: Cluster has nodes but none are Ready"
           elif [ "$READY_NODES" -gt 0 ]; then
             echo "✅ Cluster is healthy (${READY_NODES}/${TOTAL_NODES} nodes Ready)"
           fi
-          
+
+          PENDING_COUNT=$(kubectl get pods -A --field-selector=status.phase=Pending --no-headers 2>/dev/null | wc -l || echo "0")
+          if [ "$PENDING_COUNT" -gt 0 ]; then
+            echo "⚠️  Found $PENDING_COUNT Pending pod(s)"
+            kubectl get pods -A --field-selector=status.phase=Pending
+          fi
+
+          echo "⏳ Waiting for control plane nodes to report Ready (5m timeout)..."
+          if ! kubectl wait --for=condition=Ready nodes --all --timeout=300s >/dev/null 2>&1; then
+            echo "⚠️  Not all nodes reached Ready within 5 minutes. Pending pods may still be initializing."
+          fi
+
+          if kubectl get namespace calico-system >/dev/null 2>&1; then
+            echo "⏳ Waiting for Calico pods to be Ready..."
+            if ! kubectl wait --for=condition=Ready pods -n calico-system --all --timeout=300s >/dev/null 2>&1; then
+              echo "⚠️  Calico pods are not Ready yet"
+              kubectl get pods -n calico-system
+            fi
+          fi
+
           echo "::endgroup::"
 
       - name: Install storage provisioner (idempotent)
