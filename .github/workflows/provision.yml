@@ -266,55 +266,6 @@ jobs:
           echo "✅ Shared databases installed"
           echo "::endgroup::"
 
-      - name: Create game-stats database
-        if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
-        timeout-minutes: 10
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          SERVICE_DB_NAME: game_stats
-          SERVICE_DB_USER: game_stats_user
-          APP_NAME: game-stats-api
-          NAMESPACE: ${{ env.APP_NAMESPACE }}
-          DB_NAMESPACE: ${{ env.DB_NAMESPACE }}
-        run: |
-          echo "::group::Creating game-stats database"
-          ./scripts/infrastructure/create-service-database.sh
-          echo "✅ Database created for game-stats"
-          echo "::endgroup::"
-
-      - name: Create game-stats-api secrets
-        if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
-        timeout-minutes: 5
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          SERVICE_NAME: game-stats-api
-          NAMESPACE: ${{ env.APP_NAMESPACE }}
-          DB_NAMESPACE: ${{ env.DB_NAMESPACE }}
-          DB_NAME: game_stats
-          DB_USER: game_stats_user
-        run: |
-          echo "::group::Creating game-stats-api secrets"
-          ./scripts/infrastructure/create-service-secrets.sh
-          echo "✅ Secrets created for game-stats-api"
-          echo "::endgroup::"
-
-      - name: Create Metabase database
-        if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
-        timeout-minutes: 10
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          SERVICE_DB_NAME: metabase
-          SERVICE_DB_USER: metabase_user
-          APP_NAME: metabase
-          NAMESPACE: ${{ env.DB_NAMESPACE }}
-          DB_NAMESPACE: ${{ env.DB_NAMESPACE }}
-        run: |
-          echo "::group::Creating Metabase database"
-          ./scripts/infrastructure/create-service-database.sh
-          echo "✅ Database created for Metabase"
-          echo "::endgroup::"
-
       - name: Install Argo CD (idempotent)
         if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
         timeout-minutes: 15
