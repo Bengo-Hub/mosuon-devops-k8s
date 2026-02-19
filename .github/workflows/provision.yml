@@ -56,16 +56,13 @@ jobs:
           echo "ArgoCD Domain: ${ARGOCD_DOMAIN}"
           echo "Grafana Domain: ${GRAFANA_DOMAIN}"
           echo "Analytics Domain: ${ANALYTICS_DOMAIN}"
-          - name: Make scripts executable
-            if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
-            run: |
-              echo "::group::Making scripts executable"
-              find scripts -type f -name "*.sh" -exec chmod +x {} \;
-              echo "✅ All scripts are now executable"
-              echo "::endgroup::"
-
-            rm -f "$KEY_FILE"
-            echo "::endgroup::"
+          echo "API Domain: ${API_DOMAIN}"
+          echo "UI Domain: ${UI_DOMAIN}"
+          echo "DB Namespace: ${DB_NAMESPACE}"
+          echo "App Namespace: ${APP_NAMESPACE}"
+          echo "Cleanup Mode: ${ENABLE_CLEANUP}"
+          echo "Force Reprovision: ${FORCE_REPROVISION}"
+          echo "::endgroup::"
       - name: Install PostgreSQL client and Python
         run: |
           echo "::group::Installing PostgreSQL client and Python"
