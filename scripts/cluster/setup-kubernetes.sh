@@ -6,6 +6,30 @@ set -euo pipefail
 CLUSTER_NAME=${CLUSTER_NAME:-mosuon-prod}
 KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.30}
 POD_NETWORK_CIDR=${POD_NETWORK_CIDR:-192.168.0.0/16}
+CALICO_VERSION=${CALICO_VERSION:-3.28.0}
+TIGERA_OPERATOR_MANIFEST_URL="https://raw.githubusercontent.com/projectcalico/calico/v${CALICO_VERSION}/manifests/tigera-operator.yaml"
+CALICO_CUSTOM_RESOURCES_URL="https://raw.githubusercontent.com/projectcalico/calico/v${CALICO_VERSION}/manifests/custom-resources.yaml"
+CALICO_MANIFEST_RETRY_ATTEMPTS=${CALICO_MANIFEST_RETRY_ATTEMPTS:-5}
+CALICO_MANIFEST_RETRY_DELAY=${CALICO_MANIFEST_RETRY_DELAY:-5}
+CALICO_INSTALLATION_CRD=${CALICO_INSTALLATION_CRD:-installations.operator.tigera.io}
+CALICO_CRD_WAIT_TIMEOUT=${CALICO_CRD_WAIT_TIMEOUT:-120}
+
+apply_manifest_with_retry() {
+  local manifest_url=${1:?manifest URL is required}
+  local attempt=1
+  while :; do
+    if kubectl apply -f "$manifest_url"; then
+      return 0
+    fi
+    if [ "$attempt" -ge "$CALICO_MANIFEST_RETRY_ATTEMPTS" ]; then
+      echo "❌ Failed to apply ${manifest_url} after ${attempt} attempts" >&2
+      return 1
+    fi
+    echo "Retrying Calico manifest (${attempt}/${CALICO_MANIFEST_RETRY_ATTEMPTS}) in ${CALICO_MANIFEST_RETRY_DELAY}s"
+    attempt=$((attempt + 1))
+    sleep "$CALICO_MANIFEST_RETRY_DELAY"
+  done
+}
 
 if [ "$EUID" -ne 0 ]; then
   echo "Please run as root or with sudo" >&2
@@ -59,9 +83,20 @@ fi
 if kubectl get namespace calico-system >/dev/null 2>&1; then
   echo "Calico already installed"
 else
-  kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml 2>/dev/null || true
+  if ! apply_manifest_with_retry "${TIGERA_OPERATOR_MANIFEST_URL}"; then
+    echo "❌ Calico operator manifest install failed" >&2
+    exit 1
+  fi
   sleep 5
-  kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/custom-resources.yaml 2>/dev/null || true
+  if ! kubectl wait --for=condition=Established "crd/${CALICO_INSTALLATION_CRD}" --timeout="${CALICO_CRD_WAIT_TIMEOUT}s" >/dev/null 2>&1; then
+    echo "❌ Installation CRD ${CALICO_INSTALLATION_CRD} failed to establish" >&2
+    kubectl get crd "${CALICO_INSTALLATION_CRD}" -o yaml || true
+    exit 1
+  fi
+  if ! apply_manifest_with_retry "${CALICO_CUSTOM_RESOURCES_URL}"; then
+    echo "❌ Calico custom-resources install failed" >&2
+    exit 1
+  fi
 
   echo "Waiting for Calico pods to become Ready"
   CNI_TIMEOUT=${CNI_TIMEOUT:-300}
