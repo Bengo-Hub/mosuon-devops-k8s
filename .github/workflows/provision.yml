@@ -300,6 +300,19 @@ jobs:
           echo "✅ Secrets created for Metabase"
           echo "::endgroup::"
 
+      - name: Install Metabase (Argo CD application)
+        if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
+        timeout-minutes: 10
+        run: |
+          echo "::group::Installing Metabase via ArgoCD"
+          if [ -f apps/metabase/app.yaml ]; then
+            kubectl apply -f apps/metabase/app.yaml
+            echo "✅ Metabase application applied"
+          else
+            echo "⚠️ Metabase app manifest missing"
+          fi
+          echo "::endgroup::"
+
       - name: Bootstrap Argo CD applications (app-of-apps)
         if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
         run: |
@@ -340,6 +353,10 @@ jobs:
           helm repo update
           
           # Install kube-prometheus-stack
+          if kubectl get ingress -n "${NAMESPACE}" monitoring-grafana >/dev/null 2>&1; then
+            echo "Existing Grafana ingress found; deleting to avoid duplicate host definition"
+            kubectl delete ingress monitoring-grafana -n "${NAMESPACE}" --ignore-not-found
+          fi
           helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
             --namespace "${NAMESPACE}" \
             --set grafana.enabled=true \

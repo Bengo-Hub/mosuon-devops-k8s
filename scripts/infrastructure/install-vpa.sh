@@ -30,10 +30,12 @@ COMPONENTS=(
 log_section "Installing Vertical Pod Autoscaler (VPA) v${VPA_VERSION}"
 check_kubectl
 
+VPA_INSTALLED=false
 if kubectl get deployment vpa-recommender -n kube-system >/dev/null 2>&1; then
-  log_success "VPA already installed"
-  kubectl get pods -n kube-system | grep vpa || true
-  exit 0
+  VPA_INSTALLED=true
+  log_info "VPA already present; will reapply manifests to ensure desired state"
+else
+  log_info "VPA not detected - installing fresh"
 fi
 
 mkdir -p "${MANIFESTS_DIR}"
@@ -69,7 +71,7 @@ if [ ! -s "$VPA_MANIFEST" ]; then
   exit 1
 fi
 
-log_info "Applying VPA manifest"
+log_info "Applying VPA manifest (idempotent)"
 kubectl apply -f "$VPA_MANIFEST"
 
 log_info "Waiting for VPA components to report Ready"

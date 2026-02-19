@@ -85,18 +85,14 @@ if [ "${ONLY_COMPONENT}" != "redis" ]; then
         sleep 5
     fi
     
-    # Create PostgreSQL secret if not exists
-    if ! kubectl get secret postgresql -n "${NAMESPACE}" >/dev/null 2>&1; then
-        log_info "Creating PostgreSQL secret..."
-        kubectl create secret generic postgresql \
-            -n "${NAMESPACE}" \
-            --from-literal=password="${POSTGRES_PASSWORD}" \
-            --from-literal=postgres-password="${POSTGRES_PASSWORD}" \
-            --from-literal=admin-user-password="${POSTGRES_PASSWORD}"
-        log_success "PostgreSQL secret created"
-    else
-        log_info "PostgreSQL secret already exists - reusing"
-    fi
+    log_info "Applying PostgreSQL credentials secret"
+    kubectl create secret generic postgresql \
+        -n "${NAMESPACE}" \
+        --from-literal=password="${POSTGRES_PASSWORD}" \
+        --from-literal=postgres-password="${POSTGRES_PASSWORD}" \
+        --from-literal=admin-user-password="${POSTGRES_PASSWORD}" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    log_success "PostgreSQL secret ensured"
     
     # Check for custom manifests or use Helm
     if [ -f "${MANIFESTS_DIR}/postgresql-statefulset.yaml" ]; then
@@ -153,16 +149,12 @@ if [ "${ONLY_COMPONENT}" != "postgres" ]; then
         sleep 5
     fi
     
-    # Create Redis secret if not exists
-    if ! kubectl get secret redis -n "${NAMESPACE}" >/dev/null 2>&1; then
-        log_info "Creating Redis secret..."
-        kubectl create secret generic redis \
-            -n "${NAMESPACE}" \
-            --from-literal=redis-password="${REDIS_PASSWORD}"
-        log_success "Redis secret created"
-    else
-        log_info "Redis secret already exists - reusing"
-    fi
+    log_info "Applying Redis credentials secret"
+    kubectl create secret generic redis \
+        -n "${NAMESPACE}" \
+        --from-literal=redis-password="${REDIS_PASSWORD}" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    log_success "Redis secret ensured"
     
     # Check for custom manifests or use Helm
     if [ -f "${MANIFESTS_DIR}/redis-statefulset.yaml" ]; then
