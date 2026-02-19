@@ -23,6 +23,16 @@ Estimated time: 10–25 minutes
 
    ssh root@207.180.237.35
 
+   Or run the automated VPS + Kubernetes bootstrap from your workstation (recommended):
+
+   ```bash
+   # from repo root
+   ./scripts/infrastructure/run-remote-setup.sh root@207.180.237.35
+
+   # or run and auto-push kubeconfig to this repo's GitHub secrets (requires 'gh' CLI auth)
+   ./scripts/infrastructure/run-remote-setup.sh root@207.180.237.35 --push-secret
+   ```
+
 2. Update OS and install essentials:
 
    apt update && apt upgrade -y
