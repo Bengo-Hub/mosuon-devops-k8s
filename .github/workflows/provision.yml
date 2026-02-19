@@ -56,92 +56,13 @@ jobs:
           echo "ArgoCD Domain: ${ARGOCD_DOMAIN}"
           echo "Grafana Domain: ${GRAFANA_DOMAIN}"
           echo "Analytics Domain: ${ANALYTICS_DOMAIN}"
-          echo "API Domain: ${API_DOMAIN}"
-          echo "UI Domain: ${UI_DOMAIN}"
-          echo "DB Namespace: ${DB_NAMESPACE}"
-          echo "App Namespace: ${APP_NAMESPACE}"
-          echo "Cleanup Mode: ${ENABLE_CLEANUP}"
-          echo "Force Reprovision: ${FORCE_REPROVISION}"
-          echo "::endgroup::"
-
-      - name: Install DevOps tools
-        uses: ./.github/actions/install-devops-tools
-      - name: Configure kubeconfig
-        id: kubeconfig_setup
-        env:
-          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG }}
-        run: |
-          echo "::group::Configuring kubeconfig"
-          if [ -z "$KUBE_CONFIG_B64" ]; then
-            echo "⚠️ KUBE_CONFIG secret not provided"
-            echo "Please set up the Kubernetes cluster and add KUBE_CONFIG to GitHub secrets"
-            echo "kubeconfig_ready=false" >> $GITHUB_OUTPUT
-          else
-            mkdir -p ~/.kube
-            # Remove whitespace/newlines that may be injected when storing secrets
-            echo "$KUBE_CONFIG_B64" | tr -d '[:space:]' | base64 -d > ~/.kube/config || true
-            chmod 600 ~/.kube/config || true
-            export KUBECONFIG=~/.kube/config
-
-            echo "Testing cluster connectivity..."
-            if kubectl version --client >/dev/null 2>&1; then
-              # Try cluster-info but don't fail the workflow here - we'll attempt fallback retrieval
-              if kubectl cluster-info >/dev/null 2>&1; then
-                echo "✅ Successfully connected to Kubernetes cluster"
-                kubectl get nodes || true
-                echo "kubeconfig_ready=true" >> $GITHUB_OUTPUT
-              else
-                echo "⚠️ kubeconfig present but cluster-info failed"
-                echo "kubeconfig_ready=false" >> $GITHUB_OUTPUT
-              fi
-            else
-              echo "⚠️ kubectl client not available in runner"
-              echo "kubeconfig_ready=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-          echo "::endgroup::"
-
-      - name: Attempt to fetch kubeconfig via SSH (fallback)
-        if: steps.kubeconfig_setup.outputs.kubeconfig_ready != 'true' && env.SSH_PRIVATE_KEY != ''
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST || env.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER || 'root' }}
-        run: |
-          echo "::group::Attempting SSH fetch of kubeconfig"
-          set -euo pipefail
-          if [ -z "$SSH_PRIVATE_KEY" ] || [ -z "$SSH_HOST" ]; then
-            echo "SSH_PRIVATE_KEY or SSH_HOST not available - skipping SSH fallback"
-            echo "kubeconfig_ready=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          mkdir -p ~/.ssh
-          KEY_FILE=$(mktemp)
-            echo "$SSH_PRIVATE_KEY" | tr -d '[:space:]' > "$KEY_FILE"
-            chmod 600 "$KEY_FILE"
-
-            # Try common kubeconfig locations (k3s & kubeadm)
-            REMOTE_KUBECONFIG=$(ssh -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${SSH_USER}@${SSH_HOST} 'sudo cat /etc/rancher/k3s/k3s.yaml 2>/dev/null || sudo cat /etc/kubernetes/admin.conf 2>/dev/null' || true)
-
-            if [ -n "$REMOTE_KUBECONFIG" ]; then
-              echo "✅ Retrieved remote kubeconfig via SSH (writing to ~/.kube/config)"
-              mkdir -p ~/.kube
-              printf '%s' "$REMOTE_KUBECONFIG" > ~/.kube/config
-              chmod 600 ~/.kube/config
-              export KUBECONFIG=~/.kube/config
-              if kubectl cluster-info >/dev/null 2>&1; then
-                echo "✅ SSH-provisioned kubeconfig works"
-                kubectl get nodes || true
-                echo "kubeconfig_ready=true" >> $GITHUB_OUTPUT
-              else
-                echo "⚠️ SSH-provisioned kubeconfig did not connect to cluster"
-                echo "kubeconfig_ready=false" >> $GITHUB_OUTPUT
-              fi
-            else
-              echo "❌ Could not fetch kubeconfig via SSH from ${SSH_USER}@${SSH_HOST}"
-              echo "kubeconfig_ready=false" >> $GITHUB_OUTPUT
-            fi
+          - name: Make scripts executable
+            if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
+            run: |
+              echo "::group::Making scripts executable"
+              find scripts -type f -name "*.sh" -exec chmod +x {} \;
+              echo "✅ All scripts are now executable"
+              echo "::endgroup::"
 
             rm -f "$KEY_FILE"
             echo "::endgroup::"
