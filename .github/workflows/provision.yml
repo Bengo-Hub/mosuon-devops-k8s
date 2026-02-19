@@ -249,27 +249,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "::group::Installing VPA"
-          
-          # Check if VPA is already installed
-          if kubectl get deployment vpa-recommender -n kube-system >/dev/null 2>&1; then
-            echo "✅ VPA is already installed"
-            kubectl get pods -n kube-system | grep vpa || true
-          else
-            echo "Installing VPA from official release..."
-            kubectl apply -f https://github.com/kubernetes/autoscaler/releases/download/vertical-pod-autoscaler-1.1.2/vpa-v1.1.2.yaml || {
-              echo "⚠️ VPA installation failed - this is optional, continuing..."
-            }
-            
-            # Wait for VPA components
-            echo "Waiting for VPA components to be ready..."
-            kubectl rollout status deployment/vpa-recommender -n kube-system --timeout=120s || true
-            kubectl rollout status deployment/vpa-updater -n kube-system --timeout=120s || true
-            kubectl rollout status deployment/vpa-admission-controller -n kube-system --timeout=120s || true
-            
-            echo "VPA components:"
-            kubectl get pods -n kube-system | grep vpa || echo "VPA pods not yet ready"
-          fi
-          
+          ./scripts/infrastructure/install-vpa.sh
           echo "::endgroup::"
 
       - name: Install databases (PostgreSQL & Redis)
@@ -335,6 +315,18 @@ jobs:
           echo "✅ Database created for Metabase"
           echo "::endgroup::"
 
+      - name: Install Argo CD (idempotent)
+        if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
+        timeout-minutes: 15
+        env:
+          ARGOCD_DOMAIN: ${{ env.ARGOCD_DOMAIN }}
+          VPS_IP: ${{ env.SSH_HOST }}
+        run: |
+          echo "::group::Installing Argo CD"
+          ./scripts/infrastructure/install-argocd.sh
+          echo "✅ ArgoCD installed"
+          echo "::endgroup::"
+
       - name: Create Metabase secrets
         if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
         timeout-minutes: 5
@@ -355,18 +347,6 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
           
           echo "✅ Secrets created for Metabase"
-          echo "::endgroup::"
-
-      - name: Install Argo CD (idempotent)
-        if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
-        timeout-minutes: 15
-        env:
-          ARGOCD_DOMAIN: ${{ env.ARGOCD_DOMAIN }}
-          VPS_IP: ${{ env.SSH_HOST }}
-        run: |
-          echo "::group::Installing Argo CD"
-          ./scripts/infrastructure/install-argocd.sh
-          echo "✅ ArgoCD installed"
           echo "::endgroup::"
 
       - name: Bootstrap Argo CD applications (app-of-apps)
