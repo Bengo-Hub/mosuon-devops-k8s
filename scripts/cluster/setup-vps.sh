@@ -78,7 +78,7 @@ if command -v ufw >/dev/null 2>&1; then
   ufw allow 22/tcp || true
   ufw allow 80/tcp || true
   ufw allow 443/tcp || true
-  ufw allow 6443/tcp || true
+  ufw allow 6444/tcp || true
   ufw allow 2379:2380/tcp || true
   ufw allow 10250/tcp || true
   ufw --force enable || true

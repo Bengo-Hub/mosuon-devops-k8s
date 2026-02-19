@@ -34,7 +34,8 @@ if [ -f /etc/kubernetes/admin.conf ]; then
   echo "Kubernetes already initialized"
 else
   APISERVER_ADVERTISE_ADDRESS=$(hostname -I | awk '{print $1}')
-  kubeadm init --pod-network-cidr="${POD_NETWORK_CIDR}" --apiserver-advertise-address="${APISERVER_ADVERTISE_ADDRESS}" --kubernetes-version="v${KUBERNETES_VERSION}.0" || true
+  APISERVER_PORT=${APISERVER_PORT:-6444}
+  kubeadm init --pod-network-cidr="${POD_NETWORK_CIDR}" --apiserver-advertise-address="${APISERVER_ADVERTISE_ADDRESS}" --apiserver-bind-port="${APISERVER_PORT}" --kubernetes-version="v${KUBERNETES_VERSION}.0" || true
 fi
 
 # configure kubectl for root and ubuntu user
@@ -66,7 +67,9 @@ fi
 
 # Update kubeconfig server address if VPS_IP provided
 if [ -n "${VPS_IP:-}" ] && [ -f "$HOME/.kube/config" ]; then
-  sed -i "s|server: https://.*:6443|server: https://${VPS_IP}:6443|" $HOME/.kube/config || true
+  APISERVER_PORT=${APISERVER_PORT:-6444}
+  sed -i "s|server: https://.*:6443|server: https://${VPS_IP}:${APISERVER_PORT}|" $HOME/.kube/config || true
+  sed -i "s|server: https://.*:${APISERVER_PORT}|server: https://${VPS_IP}:${APISERVER_PORT}|" $HOME/.kube/config || true
 fi
 
 echo "Kubernetes setup complete"
