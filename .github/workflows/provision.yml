@@ -300,6 +300,26 @@ jobs:
           echo "✅ Secrets created for Metabase"
           echo "::endgroup::"
 
+      - name: Create Game Stats API database and secrets
+        if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
+        timeout-minutes: 5
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          APP_NAMESPACE: ${{ env.APP_NAMESPACE }}
+          DB_NAMESPACE: ${{ env.DB_NAMESPACE }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          echo "::group::Creating Game Stats API Database and Secrets"
+          
+          # Initialize the game_stats database natively on the infrastructure using shared admin credentials
+          SERVICE_DB_NAME=game_stats SERVICE_DB_USER=game_stats_user ./scripts/infrastructure/create-service-database.sh
+          
+          # Initialize the cluster connection secrets via the centralized script
+          SERVICE_NAME=game-stats-api NAMESPACE="${APP_NAMESPACE}" DB_NAME=game_stats ./scripts/infrastructure/create-service-secrets.sh
+            
+          echo "✅ Database and secrets provisioned for Game Stats API"
+          echo "::endgroup::"
+
       - name: Install Metabase (Argo CD application)
         if: steps.kubeconfig_setup.outputs.kubeconfig_ready == 'true'
         timeout-minutes: 10

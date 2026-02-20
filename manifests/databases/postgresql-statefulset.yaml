@@ -122,6 +122,16 @@ data:
     CREATE EXTENSION IF NOT EXISTS vector;
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
     CREATE EXTENSION IF NOT EXISTS pg_trgm;
+  03-create-databases.sh: |
+    #!/bin/bash
+    set -e
+    # Create databases safely since CREATE DATABASE IF NOT EXISTS is not standard
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+      SELECT 'CREATE DATABASE game_stats'
+      WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'game_stats')\gexec
+      SELECT 'CREATE DATABASE metabase'
+      WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'metabase')\gexec
+    EOSQL
 ---
 apiVersion: apps/v1
 kind: StatefulSet
