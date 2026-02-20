@@ -1,17 +1,22 @@
 #!/bin/bash
 # =============================================================================
-# Configure NGINX Ingress Controller
+# Configure NGINX Ingress Controller (hostNetwork mode)
 # =============================================================================
-# Purpose: Install and configure NGINX Ingress Controller for external access
+# Purpose: Install and configure NGINX Ingress Controller for VPS bare-metal.
+#
+#   Uses hostNetwork: true so the controller binds directly to the node's
+#   ports 80 and 443. This approach:
+#     - Eliminates NodePort + iptables NAT complexity
+#     - Allows cert-manager ACME HTTP-01 challenges to work correctly
+#     - Prevents MTU/fragmentation issues with pod-to-internet TLS connections
+#     - No iptables redirects needed
 #
 # Usage:
 #   ./configure-ingress-controller.sh
 #
 # Environment Variables:
-#   INGRESS_CLASS     - Ingress class name (default: nginx)
-#   SERVICE_TYPE      - Service type: NodePort or LoadBalancer (default: NodePort)
-#   HTTP_PORT         - NodePort for HTTP (default: 30080)
-#   HTTPS_PORT        - NodePort for HTTPS (default: 30443)
+#   INGRESS_CLASS   - Ingress class name (default: nginx)
+#   FORCE_RECONFIGURE - Force reconfigure even if healthy (default: false)
 # =============================================================================
 
 set -euo pipefail
@@ -24,17 +29,11 @@ source "${SCRIPT_DIR}/../tools/common.sh"
 # =============================================================================
 
 INGRESS_CLASS=${INGRESS_CLASS:-nginx}
-SERVICE_TYPE=${SERVICE_TYPE:-NodePort}
-HTTP_PORT=${HTTP_PORT:-30080}
-HTTPS_PORT=${HTTPS_PORT:-30443}
+FORCE_RECONFIGURE=${FORCE_RECONFIGURE:-false}
 
-log_section "Configuring NGINX Ingress Controller"
+log_section "Configuring NGINX Ingress Controller (hostNetwork)"
 log_info "Ingress Class: ${INGRESS_CLASS}"
-log_info "Service Type: ${SERVICE_TYPE}"
-if [ "$SERVICE_TYPE" = "NodePort" ]; then
-    log_info "HTTP Port: ${HTTP_PORT}"
-    log_info "HTTPS Port: ${HTTPS_PORT}"
-fi
+log_info "Mode: hostNetwork (binds directly to node ports 80/443)"
 
 # =============================================================================
 # PRE-FLIGHT CHECKS
@@ -44,190 +43,135 @@ check_kubectl
 ensure_helm
 
 # =============================================================================
-# CHECK IF ALREADY INSTALLED
+# INSTALL NGINX INGRESS CONTROLLER (if not present)
 # =============================================================================
 
-if kubectl get namespace ingress-nginx >/dev/null 2>&1; then
-    # Check if ingress controller is healthy
-    READY=$(kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+if ! kubectl get deployment ingress-nginx-controller -n ingress-nginx >/dev/null 2>&1; then
+    log_info "Installing NGINX Ingress Controller..."
+    ensure_namespace "ingress-nginx"
+
+    add_helm_repo "ingress-nginx" "https://kubernetes.github.io/ingress-nginx"
+
+    # Install with NodePort initially — we'll patch to hostNetwork below
+    helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+        --namespace ingress-nginx \
+        --set controller.ingressClassResource.name="${INGRESS_CLASS}" \
+        --set controller.ingressClassResource.default=true \
+        --set controller.service.type=ClusterIP \
+        --set controller.watchIngressWithoutClass=true \
+        --wait --timeout=10m
+
+    log_success "NGINX Ingress Controller installed"
+fi
+
+# =============================================================================
+# SWITCH TO hostNetwork MODE
+# =============================================================================
+# hostNetwork: true means the nginx pod shares the node's network namespace,
+# binding directly to ports 80 & 443 on the host — no iptables redirect needed.
+# This is the preferred approach for bare-metal/single-node VPS deployments.
+
+CURRENT_HOSTNET=$(kubectl get deployment -n ingress-nginx ingress-nginx-controller \
+  -o jsonpath='{.spec.template.spec.hostNetwork}' 2>/dev/null || echo "false")
+
+if [ "$CURRENT_HOSTNET" = "true" ] && [ "$FORCE_RECONFIGURE" != "true" ]; then
+    log_success "Ingress controller already using hostNetwork - checking health..."
+
+    READY=$(kubectl get deployment ingress-nginx-controller -n ingress-nginx \
+        -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
     if [ "${READY:-0}" -ge 1 ]; then
-        log_success "NGINX Ingress Controller is already installed and healthy"
-        log_info "Checking configuration..."
-        
-        # Verify service type and ports
-        CURRENT_TYPE=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.type}' 2>/dev/null || echo "")
-        log_info "Current service type: ${CURRENT_TYPE}"
-        
-        if [ "$CURRENT_TYPE" = "NodePort" ]; then
-            CURRENT_HTTP=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' 2>/dev/null || echo "")
-            CURRENT_HTTPS=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}' 2>/dev/null || echo "")
-            log_info "Current HTTP NodePort: ${CURRENT_HTTP}"
-            log_info "Current HTTPS NodePort: ${CURRENT_HTTPS}"
-        fi
-        
-        exit 0
+        log_success "NGINX Ingress Controller is healthy (hostNetwork mode)"
+        kubectl get pods -n ingress-nginx
+        kubectl get svc -n ingress-nginx
+    else
+        log_warning "Controller not ready, forcing reconfigure..."
+        FORCE_RECONFIGURE=true
     fi
 fi
 
-# =============================================================================
-# ADD HELM REPOSITORY
-# =============================================================================
+if [ "$CURRENT_HOSTNET" != "true" ] || [ "$FORCE_RECONFIGURE" = "true" ]; then
+    log_info "Patching ingress controller to use hostNetwork=true..."
 
-add_helm_repo "ingress-nginx" "https://kubernetes.github.io/ingress-nginx"
+    # Must scale to exactly 1 replica — hostNetwork cannot have 2 pods on same
+    # node (port conflict). Scale before patching to avoid race conditions.
+    kubectl scale deployment ingress-nginx-controller -n ingress-nginx --replicas=1
 
-# =============================================================================
-# INSTALL NGINX INGRESS CONTROLLER
-# =============================================================================
+    # Patch hostNetwork
+    kubectl patch deployment ingress-nginx-controller -n ingress-nginx \
+        --type=merge \
+        -p='{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}'
 
-log_info "Installing NGINX Ingress Controller..."
+    log_info "Waiting for ingress controller to restart..."
+    kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=180s || \
+        log_warning "Rollout may still be in progress"
 
-HELM_ARGS=(
-    "--namespace" "ingress-nginx"
-    "--create-namespace"
-    "--set" "controller.ingressClassResource.name=${INGRESS_CLASS}"
-    "--set" "controller.ingressClassResource.default=true"
-    "--set" "controller.service.type=${SERVICE_TYPE}"
-    "--set" "controller.watchIngressWithoutClass=true"
-)
-
-if [ "$SERVICE_TYPE" = "NodePort" ]; then
-    HELM_ARGS+=(
-        "--set" "controller.service.nodePorts.http=${HTTP_PORT}"
-        "--set" "controller.service.nodePorts.https=${HTTPS_PORT}"
-    )
-fi
-
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-    "${HELM_ARGS[@]}" \
-    --wait --timeout=10m
-
-# =============================================================================
-# WAIT FOR INGRESS CONTROLLER
-# =============================================================================
-
-log_info "Waiting for NGINX Ingress Controller..."
-
-wait_for_deployment "ingress-nginx" "ingress-nginx-controller" 300 || {
-    log_warning "Ingress controller may still be starting"
-}
-
-# =============================================================================
-# VERIFY INSTALLATION
-# =============================================================================
-
-log_info "Verifying installation..."
-
-kubectl get pods -n ingress-nginx
-kubectl get svc -n ingress-nginx
-kubectl get ingressclass
-
-# =============================================================================
-# SUMMARY
-# =============================================================================
-
-log_section "NGINX Ingress Controller Installation Complete"
-
-echo ""
-echo "Ingress Controller Details:"
-echo "  Namespace: ingress-nginx"
-echo "  Class: ${INGRESS_CLASS} (default)"
-echo "  Service Type: ${SERVICE_TYPE}"
-
-if [ "$SERVICE_TYPE" = "NodePort" ]; then
-    VPS_IP=${VPS_IP:-$(hostname -I | awk '{print $1}')}
-    echo ""
-    echo "Access URLs:"
-    echo "  HTTP:  http://${VPS_IP}:${HTTP_PORT}"
-    echo "  HTTPS: https://${VPS_IP}:${HTTPS_PORT}"
-    echo ""
-    echo "Configure iptables for port 80/443 (if needed):"
-    echo "  iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port ${HTTP_PORT}"
-    echo "  iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port ${HTTPS_PORT}"
-fi
-
-echo ""
-echo "Example Ingress:"
-echo "  apiVersion: networking.k8s.io/v1"
-echo "  kind: Ingress"
-echo "  metadata:"
-echo "    name: example"
-echo "    annotations:"
-echo "      cert-manager.io/cluster-issuer: letsencrypt-prod"
-echo "  spec:"
-echo "    ingressClassName: ${INGRESS_CLASS}"
-echo "    tls:"
-echo "    - hosts:"
-echo "      - example.ultichange.org"
-echo "      secretName: example-tls"
-echo "    rules:"
-echo "    - host: example.ultichange.org"
-echo "      http:"
-echo "        paths:"
-echo "        - path: /"
-echo "          pathType: Prefix"
-echo "          backend:"
-echo "            service:"
-echo "              name: example-service"
-echo "              port:"
-echo "                number: 80"
-echo ""
-
-log_success "NGINX Ingress Controller is ready"
-
-# Auto-apply iptables redirects for NodePort installs (idempotent)
-if [ "${SERVICE_TYPE}" = "NodePort" ]; then
-    log_section "Applying iptables PREROUTING redirects (NodePort -> Host ports)"
-    # Add redirects if missing
-    sudo iptables -t nat -C PREROUTING -p tcp --dport 80 -j REDIRECT --to-port "${HTTP_PORT}" >/dev/null 2>&1 || \
-        sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port "${HTTP_PORT}"
-    sudo iptables -t nat -C PREROUTING -p tcp --dport 443 -j REDIRECT --to-port "${HTTPS_PORT}" >/dev/null 2>&1 || \
-        sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port "${HTTPS_PORT}"
-
-    # OUTPUT chain: redirect localhost traffic so cert-manager ACME HTTP-01 self-checks
-    # (which originate from within the server) also reach the NodePort ingress controller.
-    # Without this, Let's Encrypt challenge verification fails.
-    sudo iptables -t nat -C OUTPUT -p tcp -o lo --dport 80 -j REDIRECT --to-port "${HTTP_PORT}" >/dev/null 2>&1 || \
-        sudo iptables -t nat -A OUTPUT -p tcp -o lo --dport 80 -j REDIRECT --to-port "${HTTP_PORT}"
-    sudo iptables -t nat -C OUTPUT -p tcp -o lo --dport 443 -j REDIRECT --to-port "${HTTPS_PORT}" >/dev/null 2>&1 || \
-        sudo iptables -t nat -A OUTPUT -p tcp -o lo --dport 443 -j REDIRECT --to-port "${HTTPS_PORT}"
-
-    # Try to install persistence and save rules (best-effort, non-fatal)
-    if command -v apt-get >/dev/null 2>&1; then
-        export DEBIAN_FRONTEND=noninteractive
-        sudo apt-get update -y >/dev/null 2>&1 || true
-        sudo apt-get install -y iptables-persistent netfilter-persistent >/dev/null 2>&1 || true
-        sudo netfilter-persistent save >/dev/null 2>&1 || true
-    fi
-
-    log_success "Applied iptables PREROUTING+OUTPUT redirects for ${HTTP_PORT}/${HTTPS_PORT} (persisted if possible)"
+    log_success "Ingress controller now uses hostNetwork (ports 80/443 bound on host)"
 fi
 
 # =============================================================================
-# KUBERNETES NETWORKING: UFW FORWARD + POD MASQUERADE (required for all setups)
+# ENSURE FORWARD POLICY + MASQUERADE (required for pod networking)
 # =============================================================================
-log_section "Ensuring Kubernetes pod-to-internet routing"
+# Even with hostNetwork for nginx, other pods (cert-manager, app pods) still need
+# correct pod-to-internet routing.
 
-# UFW DEFAULT_FORWARD_POLICY must be ACCEPT, not DROP.
-# If DROP, all Kubernetes pod traffic is silently blocked — pods cannot reach
-# Let's Encrypt (certs fail), Docker Hub (ImagePullBackOff), or any external service.
+log_section "Ensuring Kubernetes pod networking"
+
+# UFW DEFAULT_FORWARD_POLICY must be ACCEPT for Kubernetes pods to route traffic.
+# Default DROP silently blocks pod egress (cert-manager ACME, image pulls, etc.)
 if [ -f /etc/default/ufw ]; then
     if grep -q 'DEFAULT_FORWARD_POLICY="DROP"' /etc/default/ufw; then
         sudo sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
-        log_success "UFW DEFAULT_FORWARD_POLICY changed DROP -> ACCEPT (required for K8s pods)"
+        log_success "UFW DEFAULT_FORWARD_POLICY changed DROP -> ACCEPT"
     else
-        log_success "UFW DEFAULT_FORWARD_POLICY is already ACCEPT"
+        log_success "UFW DEFAULT_FORWARD_POLICY already ACCEPT"
     fi
 fi
-# Apply immediately without waiting for UFW reload
 sudo iptables -P FORWARD ACCEPT 2>/dev/null || true
 
-# MASQUERADE: SNAT pod subnet traffic heading to the internet.
-# Calico sets natOutgoing=true on IPPool but an explicit rule ensures correctness.
-# Pod CIDR: 192.168.0.0/16 (Calico default)
-sudo iptables -t nat -C POSTROUTING -s 192.168.0.0/16 ! -d 192.168.0.0/16 -j MASQUERADE 2>/dev/null || \
-    sudo iptables -t nat -A POSTROUTING -s 192.168.0.0/16 ! -d 192.168.0.0/16 -j MASQUERADE
-log_success "Pod egress MASQUERADE rule ensured (pod-CIDR -> internet)"
+# MSS clamping: prevents TCP fragmentation issues for pod TLS connections.
+# Required when pod MTU differs from node MTU (e.g. Calico VXLAN adds overhead).
+sudo iptables -t mangle -C FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || \
+    sudo iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+sudo iptables -t mangle -C OUTPUT -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || \
+    sudo iptables -t mangle -A OUTPUT -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
-# Persist all iptables rules
-sudo netfilter-persistent save >/dev/null 2>&1 || true
-log_success "FORWARD ACCEPT + MASQUERADE applied and persisted"
+# MASQUERADE for pod subnet (belt-and-suspenders alongside Calico natOutgoing=true)
+sudo iptables -t nat -C POSTROUTING -s 192.168.0.0/16 ! -d 192.168.0.0/16 -j MASQUERADE 2>/dev/null || \
+    sudo iptables -t nat -I POSTROUTING 1 -s 192.168.0.0/16 ! -d 192.168.0.0/16 -j MASQUERADE
+
+# Persist rules (best-effort)
+if command -v apt-get >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    sudo apt-get install -y iptables-persistent netfilter-persistent >/dev/null 2>&1 || true
+    sudo netfilter-persistent save >/dev/null 2>&1 || true
+fi
+
+log_success "Pod networking rules applied and persisted"
+
+# =============================================================================
+# VERIFY
+# =============================================================================
+
+log_section "NGINX Ingress Controller Configuration Complete"
+
+echo ""
+echo "Ingress Controller:"
+kubectl get pods -n ingress-nginx
+echo ""
+kubectl get svc -n ingress-nginx
+echo ""
+kubectl get ingressclass
+
+VPS_IP=${VPS_IP:-$(hostname -I | awk '{print $1}')}
+echo ""
+echo "Access URLs (no port suffix needed):"
+echo "  HTTP:  http://${VPS_IP}"
+echo "  HTTPS: https://${VPS_IP}"
+echo ""
+echo "Example Ingress:"
+echo "  annotations:"
+echo "    cert-manager.io/cluster-issuer: letsencrypt-prod"
+echo "  # No ssl-passthrough needed — nginx terminates TLS"
+echo ""
+
+log_success "NGINX Ingress Controller ready (hostNetwork mode)"
