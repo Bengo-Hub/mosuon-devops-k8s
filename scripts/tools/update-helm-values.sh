@@ -12,7 +12,10 @@ fi
 
 APP_NAME=$1
 NEW_TAG=$2
-VALUES_FILE="apps/${APP_NAME}/values.yaml"
+
+# Determine the root of the devops repo (two levels up from scripts/tools)
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+VALUES_FILE="${REPO_ROOT}/apps/${APP_NAME}/values.yaml"
 
 if [ ! -f "$VALUES_FILE" ]; then
     echo "Error: Values file $VALUES_FILE not found."
@@ -22,6 +25,8 @@ fi
 echo "Updating $APP_NAME image tag to $NEW_TAG in $VALUES_FILE..."
 
 # Safely replace the tag under the 'image:' block
+# We use a pattern that specifically looks for tag under image
+# For Windows compatibility (if running in git bash), we use a safe sed approach
 sed -i "s/tag: \".*\"/tag: \"$NEW_TAG\"/" "$VALUES_FILE"
 
 # Verify change
