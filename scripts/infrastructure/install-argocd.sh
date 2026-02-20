@@ -88,7 +88,21 @@ wait_for_deployment "argocd" "argocd-server" 300 || log_warning "ArgoCD server m
 # CONFIGURE INGRESS
 # =============================================================================
 
-log_info "Configuring production ingress with TLS..."
+# IMPORTANT: ArgoCD runs in insecure mode (no internal TLS).
+# nginx handles TLS termination via cert-manager + LetsEncrypt.
+# Do NOT use ssl-passthrough — it blocks HTTP-01 ACME challenges.
+
+log_info "Patching ArgoCD server to run in insecure mode (nginx handles TLS)..."
+kubectl patch configmap argocd-cmd-params-cm -n argocd \
+    --type=merge \
+    -p '{"data":{"server.insecure":"true"}}' 2>/dev/null || \
+kubectl create configmap argocd-cmd-params-cm -n argocd \
+    --from-literal=server.insecure=true \
+    --dry-run=client -o yaml | kubectl apply -f -
+kubectl rollout restart deployment argocd-server -n argocd 2>/dev/null || true
+log_success "ArgoCD server.insecure=true configured"
+
+log_info "Configuring production ingress with TLS (nginx terminates, backend HTTP)..."
 
 cat > /tmp/argocd-ingress-prod.yaml <<EOF
 apiVersion: networking.k8s.io/v1
@@ -98,8 +112,10 @@ metadata:
   namespace: argocd
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
 spec:
   ingressClassName: nginx
   tls:
@@ -116,19 +132,19 @@ spec:
           service:
             name: argocd-server
             port:
-              number: 443
+              number: 80
 EOF
 
 kubectl apply -f /tmp/argocd-ingress-prod.yaml
 log_success "Ingress configured for ${ARGOCD_DOMAIN}"
 
 # =============================================================================
-# CREATE CLUSTER ISSUER (if not exists)
+# CREATE/UPDATE CLUSTER ISSUER
 # =============================================================================
 
-if ! kubectl get clusterissuer letsencrypt-prod >/dev/null 2>&1; then
-    log_info "Creating LetsEncrypt ClusterIssuer..."
-    cat > /tmp/letsencrypt-prod.yaml <<EOF
+# Always apply (idempotent) — use ingressClassName (modern API, not deprecated 'class')
+log_info "Applying LetsEncrypt ClusterIssuer (ingressClassName: nginx)..."
+cat > /tmp/letsencrypt-prod.yaml <<EOF
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -142,13 +158,10 @@ spec:
     solvers:
     - http01:
         ingress:
-          class: nginx
+          ingressClassName: nginx
 EOF
-    kubectl apply -f /tmp/letsencrypt-prod.yaml
-    log_success "LetsEncrypt ClusterIssuer created"
-else
-    log_success "LetsEncrypt ClusterIssuer already exists"
-fi
+kubectl apply -f /tmp/letsencrypt-prod.yaml
+log_success "LetsEncrypt ClusterIssuer applied"
 
 # =============================================================================
 # GET INITIAL ADMIN PASSWORD

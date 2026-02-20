@@ -173,3 +173,31 @@ echo "                number: 80"
 echo ""
 
 log_success "NGINX Ingress Controller is ready"
+
+# Auto-apply iptables redirects for NodePort installs (idempotent)
+if [ "${SERVICE_TYPE}" = "NodePort" ]; then
+    log_section "Applying iptables PREROUTING redirects (NodePort -> Host ports)"
+    # Add redirects if missing
+    sudo iptables -t nat -C PREROUTING -p tcp --dport 80 -j REDIRECT --to-port "${HTTP_PORT}" >/dev/null 2>&1 || \
+        sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port "${HTTP_PORT}"
+    sudo iptables -t nat -C PREROUTING -p tcp --dport 443 -j REDIRECT --to-port "${HTTPS_PORT}" >/dev/null 2>&1 || \
+        sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port "${HTTPS_PORT}"
+
+    # OUTPUT chain: redirect localhost traffic so cert-manager ACME HTTP-01 self-checks
+    # (which originate from within the server) also reach the NodePort ingress controller.
+    # Without this, Let's Encrypt challenge verification fails.
+    sudo iptables -t nat -C OUTPUT -p tcp -o lo --dport 80 -j REDIRECT --to-port "${HTTP_PORT}" >/dev/null 2>&1 || \
+        sudo iptables -t nat -A OUTPUT -p tcp -o lo --dport 80 -j REDIRECT --to-port "${HTTP_PORT}"
+    sudo iptables -t nat -C OUTPUT -p tcp -o lo --dport 443 -j REDIRECT --to-port "${HTTPS_PORT}" >/dev/null 2>&1 || \
+        sudo iptables -t nat -A OUTPUT -p tcp -o lo --dport 443 -j REDIRECT --to-port "${HTTPS_PORT}"
+
+    # Try to install persistence and save rules (best-effort, non-fatal)
+    if command -v apt-get >/dev/null 2>&1; then
+        export DEBIAN_FRONTEND=noninteractive
+        sudo apt-get update -y >/dev/null 2>&1 || true
+        sudo apt-get install -y iptables-persistent netfilter-persistent >/dev/null 2>&1 || true
+        sudo netfilter-persistent save >/dev/null 2>&1 || true
+    fi
+
+    log_success "Applied iptables PREROUTING+OUTPUT redirects for ${HTTP_PORT}/${HTTPS_PORT} (persisted if possible)"
+fi

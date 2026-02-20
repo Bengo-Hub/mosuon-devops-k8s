@@ -103,7 +103,7 @@ spec:
     solvers:
     - http01:
         ingress:
-          class: nginx
+          ingressClassName: nginx
 EOF
 
 log_success "Created letsencrypt-staging ClusterIssuer"
@@ -123,7 +123,7 @@ spec:
     solvers:
     - http01:
         ingress:
-          class: nginx
+          ingressClassName: nginx
 EOF
 
 log_success "Created letsencrypt-prod ClusterIssuer"
