@@ -196,8 +196,8 @@ kubectl create secret generic "${SECRET_NAME}" \
     --from-literal=JWT_SECRET="${JWT_SECRET_VAL}" \
     --from-literal=METABASE_USERNAME="admin@ultichange.org" \
     --from-literal=METABASE_PASSWORD="${DATABASE_PASSWORD}" \
-    --from-literal=NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://ultistatsapi.ultichange.org}" \
-    --from-literal=NEXT_PUBLIC_WS_URL="${NEXT_PUBLIC_WS_URL:-wss://ultistats.ultichange.org}" \
+    --from-literal=NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://ultistatsapi.ultichange.org/api/v1}" \
+    --from-literal=NEXT_PUBLIC_WS_URL="${NEXT_PUBLIC_WS_URL:-wss://ultistatsapi.ultichange.org}" \
     --from-literal=NEXT_PUBLIC_ANALYTICS_URL="${NEXT_PUBLIC_ANALYTICS_URL:-https://analytics.ultichange.org}"
 
 if [ $? -eq 0 ]; then
