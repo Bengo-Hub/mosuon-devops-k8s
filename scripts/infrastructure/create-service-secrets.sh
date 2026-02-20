@@ -5,9 +5,7 @@ set -euo pipefail
 # This script generates secure passwords and creates connection strings for services
 #
 # Usage:
-#   SERVICE_NAME=auth-api ./create-service-secrets.sh
-#   SERVICE_NAME=ordering-backend NAMESPACE=ordering ./create-service-secrets.sh
-#   SERVICE_NAME=treasury-api NAMESPACE=treasury ./create-service-secrets.sh
+#   SERVICE_NAME=game-stats-api ./scripts/infrastructure/create-service-secrets.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../tools/common.sh"
@@ -24,16 +22,10 @@ if [[ -z "$SERVICE_NAME" ]]; then
     log_error "SERVICE_NAME is required"
     echo ""
     echo "Usage:"
-    echo "  SERVICE_NAME=auth-api ./create-service-secrets.sh"
-    echo "  SERVICE_NAME=ordering-backend NAMESPACE=ordering ./create-service-secrets.sh"
+    echo "  SERVICE_NAME=game-stats-api ./scripts/infrastructure/create-service-secrets.sh"
     echo ""
     echo "Supported services:"
-    echo "  - auth-api"
-    echo "  - ordering-backend"
-    echo "  - treasury-api"
-    echo "  - inventory-api"
-    echo "  - logistics-api"
-    echo "  - pos-api"
+    echo "  - game-stats-api"
     echo "  - game-stats-api"
     exit 1
 fi
@@ -41,24 +33,6 @@ fi
 # Infer namespace from service name if not provided
 if [[ -z "$NAMESPACE" ]]; then
     case "$SERVICE_NAME" in
-        auth-api)
-            NAMESPACE="auth"
-            ;;
-        ordering-backend)
-            NAMESPACE="ordering"
-            ;;
-        treasury-api)
-            NAMESPACE="treasury"
-            ;;
-        inventory-api)
-            NAMESPACE="inventory"
-            ;;
-        logistics-api)
-            NAMESPACE="logistics"
-            ;;
-        pos-api)
-            NAMESPACE="pos"
-            ;;
         game-stats-api)
             NAMESPACE="mosuon"
             DB_NAME="game_stats"

@@ -3,9 +3,10 @@
 # This script creates a database for a specific service using the common admin user
 #
 # Usage:
-#   SERVICE_DB_NAME=ordering ./scripts/create-service-database.sh
-#   APP_NAME=ordering-backend ./scripts/create-service-database.sh
-#   NAMESPACE=ordering ./scripts/create-service-database.sh
+# Usage:
+#   SERVICE_DB_NAME=game_stats ./scripts/infrastructure/create-service-database.sh
+#   APP_NAME=game-stats-api ./scripts/infrastructure/create-service-database.sh
+#   NAMESPACE=mosuon ./scripts/infrastructure/create-service-database.sh
 
 set -euo pipefail
 
@@ -38,8 +39,8 @@ SERVICE_DB_USER=${SERVICE_DB_USER:-}
 # If SERVICE_DB_NAME is not provided, try to infer from APP_NAME or NAMESPACE
 if [[ -z "$SERVICE_DB_NAME" ]]; then
     if [[ -n "${APP_NAME:-}" ]]; then
-        # Extract service name from app name (e.g., ordering-backend -> ordering)
-        SERVICE_DB_NAME=$(echo "$APP_NAME" | sed 's/-backend$//' | sed 's/-frontend$//' | sed 's/-api$//' | sed 's/-app$//')
+        # Extract service name from app name (e.g., game-stats-api -> game_stats)
+        SERVICE_DB_NAME=$(echo "$APP_NAME" | sed 's/-backend$//' | sed 's/-frontend$//' | sed 's/-api$//' | sed 's/-app$//' | tr '-' '_')
     elif [[ -n "${NAMESPACE:-}" ]]; then
         SERVICE_DB_NAME="$NAMESPACE"
     else
