@@ -32,7 +32,16 @@ sed -i "s/tag: \".*\"/tag: \"$NEW_TAG\"/" "$VALUES_FILE"
 # Verify change
 if grep -q "tag: \"$NEW_TAG\"" "$VALUES_FILE"; then
     echo "Successfully updated $VALUES_FILE"
+    
+    # Commit and push changes if in a git repo
+    if [ -d "${REPO_ROOT}/.git" ]; then
+        echo "Committing and pushing changes to devops repo..."
+        cd "$REPO_ROOT"
+        git add "$VALUES_FILE"
+        git commit -m "chore(deploy): update $APP_NAME image tag to $NEW_TAG" || echo "No changes to commit"
+        git push origin master || echo "Warning: Failed to push changes to origin"
+    fi
 else
-    echo "Warning: Failed to update or verify tag in $VALUES_FILE"
+    echo "Error: Failed to update or verify tag in $VALUES_FILE"
     exit 1
 fi
