@@ -86,9 +86,9 @@ env:
   
   # Next.js configuration
   - name: NEXT_PUBLIC_API_URL
-    value: "https://api.ultichange.org"
+    value: "https://utistatsapi.ultichange.org"
   - name: NEXT_PUBLIC_WS_URL
-    value: "wss://ultichange.org"
+    value: "wss://ultistats.ultichange.org"
   
   # Metabase Analytics
   - name: NEXT_PUBLIC_ANALYTICS_URL
@@ -148,14 +148,14 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
     nginx.ingress.kubernetes.io/proxy-buffers-number: "8"
   hosts:
-    - host: ultichange.org
+    - host: ultistats.ultichange.org
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: game-stats-ui-tls
       hosts:
-        - ultichange.org
+        - ultistats.ultichange.org
 
 # ============================================================================
 # SERVICE ACCOUNT

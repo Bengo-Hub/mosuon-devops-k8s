@@ -32,7 +32,7 @@ This guide walks through the entire cluster provisioning process, from bare VPS 
 
 - **VPS**: 4GB+ RAM, 40GB+ storage, Ubuntu 22.04
 - **Network**: Public IP, ports 80/443/6443 open
-- **Domain**: DNS access for ultichange.org
+- **Domain**: DNS access for ultistats.ultichange.org
 
 ### Required Tools (Local Machine)
 
@@ -302,8 +302,8 @@ Login to your DNS provider and add these A records:
 ```
 Type   Name                          Value           TTL
 ────────────────────────────────────────────────────────
-A      ultichange.org     207.180.237.35  300
-A      api.ultichange.org 207.180.237.35  300
+A      ultistats.ultichange.org     207.180.237.35  300
+A      ultistatsapi.ultichange.org 207.180.237.35  300
 A      argocd.ultichange.org    207.180.237.35  300
 A      grafana.ultichange.org   207.180.237.35  300
 A      analytics.ultichange.org 207.180.237.35  300
@@ -314,12 +314,12 @@ A      analytics.ultichange.org 207.180.237.35  300
 ```bash
 # Check DNS resolution
 
-nslookup ultichange.org
-nslookup api.ultichange.org
+nslookup ultistats.ultichange.org
+nslookup ultistatsapi.ultichange.org
 nslookup argocd.ultichange.org
 
 # Or use dig
-dig ultichange.org +short
+dig ultistats.ultichange.org +short
 # Should return: 207.180.237.35
 ```
 
@@ -420,8 +420,8 @@ kubectl get ingress -n mosuon
 
 # Should show:
 # NAME              HOSTS                          ADDRESS          PORTS
-# game-stats-api    api.ultichange.org  207.180.237.35   80, 443
-# game-stats-ui     ultichange.org           207.180.237.35   80, 443
+# game-stats-api    ultistatsapi.ultichange.org  207.180.237.35   80, 443
+# game-stats-ui     ultistats.ultichange.org           207.180.237.35   80, 443
 ```
 
 #### 7.4 Check TLS Certificates
@@ -443,16 +443,16 @@ kubectl logs -n cert-manager -l app=cert-manager
 
 ```bash
 # Test API health
-curl https://api.ultichange.org/health
+curl https://ultistatsapi.ultichange.org/health
 # Expected: {"status":"ok","timestamp":"..."}
 
 # Test UI
-curl -I https://ultichange.org
+curl -I https://ultistats.ultichange.org
 # Expected: HTTP/2 200
 
 # Open in browser
-open https://ultichange.org
-open https://api.ultichange.org/health
+open https://ultistats.ultichange.org
+open https://ultistatsapi.ultichange.org/health
 ```
 
 #### 7.6 Check Database Connection

@@ -8,8 +8,8 @@ Complete guide for DNS, ingress, and TLS certificate management on the Mosuon cl
 
 ```
 ultichange.org (207.180.237.35)
-├── ultichange.org → Frontend (Next.js PWA)
-├── api.ultichange.org → Backend API (Go/Chi)
+├── ultistats.ultichange.org → Frontend (Next.js PWA)
+├── ultistatsapi.ultichange.org → Backend API (Go/Chi)
 ├── argocd.ultichange.org → ArgoCD Dashboard
 ├── grafana.ultichange.org → Grafana Monitoring
 ├── analytics.ultichange.org → Metabase Analytics
@@ -39,8 +39,8 @@ Point all subdomains to the cluster IP:
 ultichange.org.              A    207.180.237.35
 
 ; Application domains
-ultichange.org.              A    207.180.237.35
-api.ultichange.org.          A    207.180.237.35
+ultistats.ultichange.org.              A    207.180.237.35
+ultistatsapi.ultichange.org.          A    207.180.237.35
 
 ; Infrastructure domains
 argocd.ultichange.org.       A    207.180.237.35
@@ -66,8 +66,8 @@ prometheus.ultichange.org.   A    207.180.237.35
 ### CNAME Records (Alternative)
 
 ```dns
-ultichange.org.              CNAME  @
-api.ultichange.org.          CNAME  @
+ultistats.ultichange.org.              CNAME  @
+ultistatsapi.ultichange.org.          CNAME  @
 argocd.ultichange.org.       CNAME  @
 grafana.ultichange.org.      CNAME  @
 ```
@@ -152,7 +152,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: admin@ultichange.org
+    email: admin@ultistats.ultichange.org
     privateKeySecretRef:
       name: letsencrypt-prod-key
     solvers:
@@ -167,7 +167,7 @@ metadata:
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
-    email: admin@ultichange.org
+    email: admin@ultistats.ultichange.org
     privateKeySecretRef:
       name: letsencrypt-staging-key
     solvers:
@@ -228,10 +228,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-      - ultichange.org
+      - ultistats.ultichange.org
       secretName: game-stats-ui-tls
   rules:
-    - host: ultichange.org
+    - host: ultistats.ultichange.org
       http:
         paths:
           - path: /
@@ -259,17 +259,17 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ultichange.org"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ultistats.ultichange.org"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-      - api.ultichange.org
+      - ultistatsapi.ultichange.org
       secretName: game-stats-api-tls
   rules:
-    - host: api.ultichange.org
+    - host: ultistatsapi.ultichange.org
       http:
         paths:
           - path: /
@@ -415,7 +415,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/ZONE_ID/dns_records" \
   -H "Content-Type: application/json" \
   --data '{
     "type": "A",
-    "name": "ultichange.org",
+    "name": "ultistats.ultichange.org",
     "content": "207.180.237.35",
     "ttl": 120,
     "proxied": false
@@ -433,7 +433,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/ZONE_ID/dns_records" \
 ```bash
 # Create hosted zone
 aws route53 create-hosted-zone \
-  --name ultichange.org \
+  --name ultistats.ultichange.org \
   --caller-reference "$(date +%s)"
 
 # Add A record
@@ -443,7 +443,7 @@ aws route53 change-resource-record-sets \
     "Changes": [{
       "Action": "CREATE",
       "ResourceRecordSet": {
-        "Name": "ultichange.org",
+        "Name": "ultistats.ultichange.org",
         "Type": "A",
         "TTL": 300,
         "ResourceRecords": [{"Value": "207.180.237.35"}]
@@ -464,26 +464,26 @@ kubectl get pods -n ingress-nginx
 kubectl get ingress -A
 
 # Test HTTP redirect
-curl -I http://ultichange.org
+curl -I http://ultistats.ultichange.org
 
 # Test HTTPS
-curl -I https://ultichange.org
+curl -I https://ultistats.ultichange.org
 
 # Test with specific host header (before DNS)
-curl -H "Host: ultichange.org" http://207.180.237.35:30080
+curl -H "Host: ultistats.ultichange.org" http://207.180.237.35:30080
 ```
 
 ### Certificate Validation
 
 ```bash
 # Check certificate expiry
-openssl s_client -connect ultichange.org:443 -servername ultichange.org | openssl x509 -noout -dates
+openssl s_client -connect ultistats.ultichange.org:443 -servername ultistats.ultichange.org | openssl x509 -noout -dates
 
 # Verify certificate chain
-openssl s_client -connect ultichange.org:443 -servername ultichange.org -showcerts
+openssl s_client -connect ultistats.ultichange.org:443 -servername ultistats.ultichange.org -showcerts
 
 # Check SSL Labs rating
-# Visit: https://www.ssllabs.com/ssltest/analyze.html?d=ultichange.org
+# Visit: https://www.ssllabs.com/ssltest/analyze.html?d=ultistats.ultichange.org
 ```
 
 ## Monitoring & Metrics
@@ -516,10 +516,10 @@ Key panels:
 
 ```bash
 # Check DNS propagation
-dig ultichange.org +short
+dig ultistats.ultichange.org +short
 
 # Check from external resolver
-dig @8.8.8.8 ultichange.org +short
+dig @8.8.8.8 ultistats.ultichange.org +short
 
 # Flush local DNS cache (client)
 sudo systemd-resolve --flush-caches
@@ -538,7 +538,7 @@ kubectl describe certificaterequest -n mosuon
 kubectl get challenges -A
 
 # Manually verify challenge
-curl http://ultichange.org/.well-known/acme-challenge/TOKEN
+curl http://ultistats.ultichange.org/.well-known/acme-challenge/TOKEN
 ```
 
 ### 502 Bad Gateway

@@ -111,7 +111,7 @@ graph TD
    kubectl get pods -A | grep -v Running
    
   # Check ingress
-  curl -I https://ultichange.org
+  curl -I https://ultistats.ultichange.org
    
    # Check databases
    kubectl exec -n infra postgresql-0 -- pg_isready
@@ -186,7 +186,7 @@ kubectl rollout restart deployment/game-stats-api -n mosuon
 
 # Update ConfigMap
 kubectl create configmap game-stats-ui-config \
-  --from-literal=NEXT_PUBLIC_API_URL=https://api.ultichange.org \
+  --from-literal=NEXT_PUBLIC_API_URL=https://ultistatsapi.ultichange.org \
   --namespace=mosuon \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
@@ -478,8 +478,8 @@ kubectl get pods -A | grep -v Running
 kubectl get applications -n argocd
 
 # 3. Test critical endpoints
-curl -I https://ultichange.org
-curl -I https://api.ultichange.org/health
+curl -I https://ultistats.ultichange.org
+curl -I https://ultistatsapi.ultichange.org/health
 
 # 4. Run health check script
 ./scripts/daily-health-check.sh

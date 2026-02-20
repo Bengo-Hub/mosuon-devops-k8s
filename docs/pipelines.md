@@ -320,7 +320,7 @@ kubectl logs -n mosuon pod-name --previous
 https://grafana.ultichange.org
 
 # Application metrics endpoint
-curl https://api.ultichange.org/metrics
+curl https://ultistatsapi.ultichange.org/metrics
 ```
 
 ## Rollback Procedures

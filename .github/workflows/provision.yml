@@ -32,8 +32,8 @@ jobs:
       ARGOCD_DOMAIN: ${{ secrets.ARGOCD_DOMAIN || 'argocd.ultichange.org' }}
       GRAFANA_DOMAIN: ${{ secrets.GRAFANA_DOMAIN || 'grafana.ultichange.org' }}
       ANALYTICS_DOMAIN: ${{ secrets.ANALYTICS_DOMAIN || 'analytics.ultichange.org' }}
-      API_DOMAIN: ${{ secrets.API_DOMAIN || 'api.ultichange.org' }}
-      UI_DOMAIN: ${{ secrets.UI_DOMAIN || 'ultichange.org' }}
+      API_DOMAIN: ${{ secrets.API_DOMAIN || 'ultistatsapi.ultichange.org' }}
+      UI_DOMAIN: ${{ secrets.UI_DOMAIN || 'ultistats.ultichange.org' }}
       DB_NAMESPACE: ${{ secrets.DB_NAMESPACE || 'infra' }}
       MONITORING_NAMESPACE: ${{ secrets.MONITORING_NAMESPACE || 'infra' }}
       APP_NAMESPACE: ${{ secrets.APP_NAMESPACE || 'mosuon' }}

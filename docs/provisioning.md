@@ -222,7 +222,7 @@ Installs automatic TLS certificate management.
     spec:
       acme:
         server: https://acme-v02.api.letsencrypt.org/directory
-        email: admin@ultichange.org
+        email: admin@ultistats.ultichange.org
         privateKeySecretRef:
           name: letsencrypt-prod
         solvers:
@@ -485,8 +485,8 @@ kubectl get ingress -A
 # Expected:
 # NAMESPACE   NAME                    HOSTS                          PORTS
 # argocd      argocd-server-ingress   argocd.ultichange.org     80, 443
-# mosuon      game-stats-api          api.ultichange.org        80, 443
-# mosuon      game-stats-ui           ultichange.org            80, 443
+# mosuon      game-stats-api          ultistatsapi.ultichange.org        80, 443
+# mosuon      game-stats-ui           ultistats.ultichange.org            80, 443
 ```
 
 ### Check TLS Certificates
@@ -501,10 +501,10 @@ kubectl get certificate -A
 
 ```bash
 # API health check
-curl https://api.ultichange.org/health
+curl https://ultistatsapi.ultichange.org/health
 
 # UI
-curl -I https://ultichange.org
+curl -I https://ultistats.ultichange.org
 
 # ArgoCD
 curl -I https://argocd.ultichange.org
@@ -578,7 +578,7 @@ kubectl describe pod postgresql-0 -n infra
 
 ```bash
 # Check DNS is pointing to correct IP
-nslookup api.ultichange.org
+nslookup ultistatsapi.ultichange.org
 
 # Check cert-manager logs
 kubectl logs -n cert-manager -l app=cert-manager

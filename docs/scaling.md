@@ -336,7 +336,7 @@ kubectl scale statefulset postgresql -n infra --replicas=3
 
 ```bash
 # 10000 requests, 100 concurrent
-ab -n 10000 -c 100 https://api.ultichange.org/api/v1/matches
+ab -n 10000 -c 100 https://ultistatsapi.ultichange.org/api/v1/matches
 ```
 
 ### Using k6
@@ -357,7 +357,7 @@ export let options = {
 };
 
 export default function () {
-  let res = http.get('https://api.ultichange.org/api/v1/matches');
+  let res = http.get('https://ultistatsapi.ultichange.org/api/v1/matches');
   
   check(res, {
     'status is 200': (r) => r.status === 200,
@@ -384,7 +384,7 @@ from locust import HttpUser, task, between
 
 class GameStatsUser(HttpUser):
     wait_time = between(1, 3)
-    host = "https://api.ultichange.org"
+    host = "https://ultistatsapi.ultichange.org"
     
     @task(3)
     def get_matches(self):
