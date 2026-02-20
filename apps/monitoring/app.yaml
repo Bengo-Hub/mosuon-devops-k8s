@@ -52,11 +52,11 @@ spec:
             annotations:
               cert-manager.io/cluster-issuer: letsencrypt-prod
             hosts:
-              - grafana.ultimatestats.co.ke
+              - grafana.ultichange.org
             tls:
               - secretName: grafana-tls
                 hosts:
-                  - grafana.ultimatestats.co.ke
+                  - grafana.ultichange.org
 
         alertmanager:
           enabled: true

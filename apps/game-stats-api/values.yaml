@@ -100,7 +100,7 @@ env:
         key: JWT_SECRET
   # Metabase Analytics
   - name: METABASE_BASE_URL
-    value: "https://analytics.ultimatestats.co.ke"
+    value: "https://analytics.ultichange.org"
   - name: METABASE_USERNAME
     valueFrom:
       secretKeyRef:
@@ -168,17 +168,17 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ultimatestats.co.ke"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ultichange.org"
     nginx.ingress.kubernetes.io/enable-cors: "true"
   hosts:
-    - host: api.ultimatestats.co.ke
+    - host: api.ultichange.org
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: game-stats-api-tls
       hosts:
-        - api.ultimatestats.co.ke
+        - api.ultichange.org
 # ============================================================================
 # SERVICE ACCOUNT
 # ============================================================================

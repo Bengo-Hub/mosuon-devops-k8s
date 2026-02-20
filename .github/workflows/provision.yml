@@ -29,11 +29,11 @@ jobs:
       contents: read
     env:
       # Mosuon-specific domains and configuration
-      ARGOCD_DOMAIN: ${{ secrets.ARGOCD_DOMAIN || 'argocd.ultimatestats.co.ke' }}
-      GRAFANA_DOMAIN: ${{ secrets.GRAFANA_DOMAIN || 'grafana.ultimatestats.co.ke' }}
-      ANALYTICS_DOMAIN: ${{ secrets.ANALYTICS_DOMAIN || 'analytics.ultimatestats.co.ke' }}
-      API_DOMAIN: ${{ secrets.API_DOMAIN || 'api.ultimatestats.co.ke' }}
-      UI_DOMAIN: ${{ secrets.UI_DOMAIN || 'ultimatestats.co.ke' }}
+      ARGOCD_DOMAIN: ${{ secrets.ARGOCD_DOMAIN || 'argocd.ultichange.org' }}
+      GRAFANA_DOMAIN: ${{ secrets.GRAFANA_DOMAIN || 'grafana.ultichange.org' }}
+      ANALYTICS_DOMAIN: ${{ secrets.ANALYTICS_DOMAIN || 'analytics.ultichange.org' }}
+      API_DOMAIN: ${{ secrets.API_DOMAIN || 'api.ultichange.org' }}
+      UI_DOMAIN: ${{ secrets.UI_DOMAIN || 'ultichange.org' }}
       DB_NAMESPACE: ${{ secrets.DB_NAMESPACE || 'infra' }}
       MONITORING_NAMESPACE: ${{ secrets.MONITORING_NAMESPACE || 'infra' }}
       APP_NAMESPACE: ${{ secrets.APP_NAMESPACE || 'mosuon' }}

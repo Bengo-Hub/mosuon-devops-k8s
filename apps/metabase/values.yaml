@@ -78,7 +78,7 @@ env:
   
   # Application settings
   - name: MB_SITE_URL
-    value: "https://analytics.ultimatestats.co.ke"
+    value: "https://analytics.ultichange.org"
   - name: MB_SITE_NAME
     value: "Ultimate Stats Analytics"
   - name: MB_EMBEDDING_SECRET_KEY
@@ -165,14 +165,14 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-buffering: "on"
     nginx.ingress.kubernetes.io/proxy-buffer-size: "32k"
   hosts:
-    - host: analytics.ultimatestats.co.ke
+    - host: analytics.ultichange.org
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: metabase-tls
       hosts:
-        - analytics.ultimatestats.co.ke
+        - analytics.ultichange.org
 
 # ============================================================================
 # SERVICE ACCOUNT

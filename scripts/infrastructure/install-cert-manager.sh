@@ -9,7 +9,7 @@
 #
 # Environment Variables:
 #   CERT_MANAGER_VERSION  - cert-manager version (default: latest)
-#   ACME_EMAIL           - Email for LetsEncrypt (default: admin@ultimatestats.co.ke)
+#   ACME_EMAIL           - Email for LetsEncrypt (default: admin@ultichange.org)
 # =============================================================================
 
 set -euo pipefail
@@ -22,7 +22,7 @@ source "${SCRIPT_DIR}/../tools/common.sh"
 # =============================================================================
 
 CERT_MANAGER_VERSION=${CERT_MANAGER_VERSION:-latest}
-ACME_EMAIL=${ACME_EMAIL:-admin@ultimatestats.co.ke}
+ACME_EMAIL=${ACME_EMAIL:-admin@ultichange.org}
 
 log_section "Installing cert-manager"
 log_info "Version: ${CERT_MANAGER_VERSION}"

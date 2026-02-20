@@ -222,7 +222,7 @@ Installs automatic TLS certificate management.
     spec:
       acme:
         server: https://acme-v02.api.letsencrypt.org/directory
-        email: admin@ultimatestats.co.ke
+        email: admin@ultichange.org
         privateKeySecretRef:
           name: letsencrypt-prod
         solvers:
@@ -244,7 +244,7 @@ annotations:
 tls:
   - secretName: app-tls
     hosts:
-      - app.ultimatestats.co.ke
+      - app.ultichange.org
 ```
 
 ### Stage 8: PostgreSQL Database
@@ -408,10 +408,10 @@ Installs GitOps continuous deployment controller.
       ingressClassName: nginx
       tls:
       - hosts:
-        - argocd.ultimatestats.co.ke
+        - argocd.ultichange.org
         secretName: argocd-server-tls
       rules:
-      - host: argocd.ultimatestats.co.ke
+      - host: argocd.ultichange.org
         http:
           paths:
           - path: /
@@ -431,7 +431,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath="{.data.password}" | base64 -d
 
 # URL
-https://argocd.ultimatestats.co.ke
+https://argocd.ultichange.org
 ```
 
 ### Stage 13: Bootstrap Applications
@@ -484,9 +484,9 @@ kubectl get ingress -A
 
 # Expected:
 # NAMESPACE   NAME                    HOSTS                          PORTS
-# argocd      argocd-server-ingress   argocd.ultimatestats.co.ke     80, 443
-# mosuon      game-stats-api          api.ultimatestats.co.ke        80, 443
-# mosuon      game-stats-ui           ultimatestats.co.ke            80, 443
+# argocd      argocd-server-ingress   argocd.ultichange.org     80, 443
+# mosuon      game-stats-api          api.ultichange.org        80, 443
+# mosuon      game-stats-ui           ultichange.org            80, 443
 ```
 
 ### Check TLS Certificates
@@ -501,13 +501,13 @@ kubectl get certificate -A
 
 ```bash
 # API health check
-curl https://api.ultimatestats.co.ke/health
+curl https://api.ultichange.org/health
 
 # UI
-curl -I https://ultimatestats.co.ke
+curl -I https://ultichange.org
 
 # ArgoCD
-curl -I https://argocd.ultimatestats.co.ke
+curl -I https://argocd.ultichange.org
 ```
 
 ## Re-running Provisioning
@@ -578,7 +578,7 @@ kubectl describe pod postgresql-0 -n infra
 
 ```bash
 # Check DNS is pointing to correct IP
-nslookup api.ultimatestats.co.ke
+nslookup api.ultichange.org
 
 # Check cert-manager logs
 kubectl logs -n cert-manager -l app=cert-manager

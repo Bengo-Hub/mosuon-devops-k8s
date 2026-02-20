@@ -5,10 +5,10 @@
 # Purpose: Install and configure ArgoCD with TLS ingress for production access
 #
 # Usage:
-#   ARGOCD_DOMAIN=argocd.ultimatestats.co.ke ./install-argocd.sh
+#   ARGOCD_DOMAIN=argocd.ultichange.org ./install-argocd.sh
 #
 # Environment Variables:
-#   ARGOCD_DOMAIN    - Domain for ArgoCD (default: argocd.ultimatestats.co.ke)
+#   ARGOCD_DOMAIN    - Domain for ArgoCD (default: argocd.ultichange.org)
 #   VPS_IP           - VPS IP for DNS hint (optional)
 #   FORCE_UPGRADE    - Force upgrade even if healthy (default: false)
 # =============================================================================
@@ -23,7 +23,7 @@ source "${SCRIPT_DIR}/../tools/common.sh"
 # CONFIGURATION
 # =============================================================================
 
-ARGOCD_DOMAIN=${ARGOCD_DOMAIN:-argocd.ultimatestats.co.ke}
+ARGOCD_DOMAIN=${ARGOCD_DOMAIN:-argocd.ultichange.org}
 VPS_IP=${VPS_IP:-207.180.237.35}
 FORCE_UPGRADE=${FORCE_UPGRADE:-false}
 
@@ -136,7 +136,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: admin@ultimatestats.co.ke
+    email: admin@ultichange.org
     privateKeySecretRef:
       name: letsencrypt-prod-key
     solvers:

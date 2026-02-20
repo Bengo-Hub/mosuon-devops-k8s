@@ -109,7 +109,7 @@ To add a new application to the Mosuon cluster:
 ### Shared Services (infra namespace)
 - **PostgreSQL** - Shared database with per-service databases
 - **Redis** - Caching and sessions
-- **Metabase** - Data analytics platform (analytics.ultimatestats.co.ke)
+- **Metabase** - Data analytics platform (analytics.ultichange.org)
 - **pgvector** - PostgreSQL extension for vector embeddings (used by analytics features)
 - **Prometheus + Grafana** - Monitoring stack
 
@@ -144,10 +144,10 @@ Developer Push → GitHub Actions → Build Image → Push to Registry
 
 ## Domains
 
-- **ArgoCD**: https://argocd.ultimatestats.co.ke
-- **Grafana**: https://grafana.ultimatestats.co.ke
-- **Game Stats UI**: https://ultimatestats.co.ke
-- **Game Stats API**: https://api.ultimatestats.co.ke
+- **ArgoCD**: https://argocd.ultichange.org
+- **Grafana**: https://grafana.ultichange.org
+- **Game Stats UI**: https://ultichange.org
+- **Game Stats API**: https://api.ultichange.org
 
 ## Support
 

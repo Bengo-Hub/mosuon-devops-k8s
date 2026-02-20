@@ -133,14 +133,14 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: your-app.ultimatestats.co.ke
+    - host: your-app.ultichange.org
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: your-app-tls
       hosts:
-        - your-app.ultimatestats.co.ke
+        - your-app.ultichange.org
 
 autoscaling:
   enabled: true
@@ -243,7 +243,7 @@ kubectl logs -n mosuon -l app=your-app-name --tail=50
 
 Add A record:
 ```
-your-app.ultimatestats.co.ke → 207.180.237.35
+your-app.ultichange.org → 207.180.237.35
 ```
 
 ### 6.2 Verify TLS Certificate

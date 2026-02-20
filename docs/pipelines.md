@@ -297,7 +297,7 @@ https://github.com/your-org/your-repo/actions
 
 ```bash
 # Access ArgoCD UI
-https://argocd.ultimatestats.co.ke
+https://argocd.ultichange.org
 
 # CLI status
 kubectl get app -n argocd
@@ -317,10 +317,10 @@ kubectl logs -n mosuon pod-name --previous
 
 ```bash
 # Prometheus metrics
-https://grafana.ultimatestats.co.ke
+https://grafana.ultichange.org
 
 # Application metrics endpoint
-curl https://api.ultimatestats.co.ke/metrics
+curl https://api.ultichange.org/metrics
 ```
 
 ## Rollback Procedures

@@ -43,7 +43,7 @@ error() { log_error "$1"; }
 # =============================================================================
 DEVOPS_REPO=${DEVOPS_REPO:-"Bengo-Hub/mosuon-devops-k8s"}
 DEVOPS_DIR=${DEVOPS_DIR:-"$HOME/mosuon-devops-k8s"}
-GIT_EMAIL=${GIT_EMAIL:-"dev@ultimatestats.co.ke"}
+GIT_EMAIL=${GIT_EMAIL:-"dev@ultichange.org"}
 GIT_USER=${GIT_USER:-"Mosuon Bot"}
 
 # =============================================================================

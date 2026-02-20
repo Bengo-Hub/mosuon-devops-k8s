@@ -32,7 +32,7 @@ This guide walks through the entire cluster provisioning process, from bare VPS 
 
 - **VPS**: 4GB+ RAM, 40GB+ storage, Ubuntu 22.04
 - **Network**: Public IP, ports 80/443/6443 open
-- **Domain**: DNS access for ultimatestats.co.ke
+- **Domain**: DNS access for ultichange.org
 
 ### Required Tools (Local Machine)
 
@@ -259,7 +259,7 @@ The `provision.yml` workflow automatically:
 
 11. **Install Argo CD**
     - GitOps deployment controller
-    - Ingress at argocd.ultimatestats.co.ke
+    - Ingress at argocd.ultichange.org
 
 12. **Bootstrap Applications**
     - root-app (app-of-apps)
@@ -302,11 +302,11 @@ Login to your DNS provider and add these A records:
 ```
 Type   Name                          Value           TTL
 ────────────────────────────────────────────────────────
-A      ultimatestats.co.ke     207.180.237.35  300
-A      api.ultimatestats.co.ke 207.180.237.35  300
-A      argocd.ultimatestats.co.ke    207.180.237.35  300
-A      grafana.ultimatestats.co.ke   207.180.237.35  300
-A      analytics.ultimatestats.co.ke 207.180.237.35  300
+A      ultichange.org     207.180.237.35  300
+A      api.ultichange.org 207.180.237.35  300
+A      argocd.ultichange.org    207.180.237.35  300
+A      grafana.ultichange.org   207.180.237.35  300
+A      analytics.ultichange.org 207.180.237.35  300
 ```
 
 #### 5.2 Verify DNS Propagation
@@ -314,12 +314,12 @@ A      analytics.ultimatestats.co.ke 207.180.237.35  300
 ```bash
 # Check DNS resolution
 
-nslookup ultimatestats.co.ke
-nslookup api.ultimatestats.co.ke
-nslookup argocd.ultimatestats.co.ke
+nslookup ultichange.org
+nslookup api.ultichange.org
+nslookup argocd.ultichange.org
 
 # Or use dig
-dig ultimatestats.co.ke +short
+dig ultichange.org +short
 # Should return: 207.180.237.35
 ```
 
@@ -398,7 +398,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
 echo
 
 # Login to ArgoCD
-argocd login argocd.ultimatestats.co.ke
+argocd login argocd.ultichange.org
 # Username: admin
 # Password: [from above]
 
@@ -420,8 +420,8 @@ kubectl get ingress -n mosuon
 
 # Should show:
 # NAME              HOSTS                          ADDRESS          PORTS
-# game-stats-api    api.ultimatestats.co.ke  207.180.237.35   80, 443
-# game-stats-ui     ultimatestats.co.ke           207.180.237.35   80, 443
+# game-stats-api    api.ultichange.org  207.180.237.35   80, 443
+# game-stats-ui     ultichange.org           207.180.237.35   80, 443
 ```
 
 #### 7.4 Check TLS Certificates
@@ -443,16 +443,16 @@ kubectl logs -n cert-manager -l app=cert-manager
 
 ```bash
 # Test API health
-curl https://api.ultimatestats.co.ke/health
+curl https://api.ultichange.org/health
 # Expected: {"status":"ok","timestamp":"..."}
 
 # Test UI
-curl -I https://ultimatestats.co.ke
+curl -I https://ultichange.org
 # Expected: HTTP/2 200
 
 # Open in browser
-open https://ultimatestats.co.ke
-open https://api.ultimatestats.co.ke/health
+open https://ultichange.org
+open https://api.ultichange.org/health
 ```
 
 #### 7.6 Check Database Connection
@@ -488,7 +488,7 @@ helm repo update
 helm install prometheus prometheus-community/kube-prometheus-stack \
   --namespace infra \
   --set grafana.ingress.enabled=true \
-  --set grafana.ingress.hosts[0]=grafana.ultimatestats.co.ke
+  --set grafana.ingress.hosts[0]=grafana.ultichange.org
 ```
 
 ### 3. Setup Backups

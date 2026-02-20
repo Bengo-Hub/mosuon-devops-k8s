@@ -9,7 +9,7 @@ Before starting, ensure you have:
 - [ ] Ubuntu 22.04 VPS at 207.180.237.35 with root access
 - [ ] Docker Hub account (username/password)
 - [ ] GitHub account with repository access
-- [ ] Domain ultimatestats.co.ke with DNS management access
+- [ ] Domain ultichange.org with DNS management access
 - [ ] Local machine with Git, Docker, kubectl, and helm installed
 
 ## Step 1: Access Configuration (5 minutes)
@@ -112,11 +112,11 @@ This installs:
 Add A records to your DNS provider:
 
 ```
-ultimatestats.co.ke               A    207.180.237.35
-api.ultimatestats.co.ke           A    207.180.237.35
-argocd.ultimatestats.co.ke       A    207.180.237.35
-grafana.ultimatestats.co.ke      A    207.180.237.35
-analytics.ultimatestats.co.ke    A    207.180.237.35
+ultichange.org               A    207.180.237.35
+api.ultichange.org           A    207.180.237.35
+argocd.ultichange.org       A    207.180.237.35
+grafana.ultichange.org      A    207.180.237.35
+analytics.ultichange.org    A    207.180.237.35
 ```
 
 Wait 5-10 minutes for DNS propagation.
@@ -158,7 +158,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath="{.data.password}" | base64 -d
 
 # Login to ArgoCD UI
-open https://argocd.ultimatestats.co.ke
+open https://argocd.ultichange.org
 # Username: admin
 # Password: (from above command)
 ```
@@ -175,10 +175,10 @@ kubectl get pods -n argocd
 kubectl get ingress -n mosuon
 
 # Test API health
-curl https://api.ultimatestats.co.ke/health
+curl https://api.ultichange.org/health
 
 # Visit UI
-open https://ultimatestats.co.ke
+open https://ultichange.org
 ```
 
 ### 5.3 Check TLS Certificates
@@ -202,7 +202,7 @@ kubectl get secret -n infra grafana-admin-credentials \
   -o jsonpath="{.data.admin-password}" | base64 -d
 
 # Login
-open https://grafana.ultimatestats.co.ke
+open https://grafana.ultichange.org
 ```
 
 ### 6.2 Configure Dashboards

@@ -7,19 +7,19 @@ Complete guide for DNS, ingress, and TLS certificate management on the Mosuon cl
 ### Primary Domains
 
 ```
-ultimatestats.co.ke (207.180.237.35)
-├── ultimatestats.co.ke → Frontend (Next.js PWA)
-├── api.ultimatestats.co.ke → Backend API (Go/Chi)
-├── argocd.ultimatestats.co.ke → ArgoCD Dashboard
-├── grafana.ultimatestats.co.ke → Grafana Monitoring
-├── analytics.ultimatestats.co.ke → Metabase Analytics
-└── prometheus.ultimatestats.co.ke → Prometheus Metrics
+ultichange.org (207.180.237.35)
+├── ultichange.org → Frontend (Next.js PWA)
+├── api.ultichange.org → Backend API (Go/Chi)
+├── argocd.ultichange.org → ArgoCD Dashboard
+├── grafana.ultichange.org → Grafana Monitoring
+├── analytics.ultichange.org → Metabase Analytics
+└── prometheus.ultichange.org → Prometheus Metrics
 ```
 
 ### Infrastructure Services
 
 ```
-*.ultimatestats.co.ke
+*.ultichange.org
 ├── postgresql.infra (internal only)
 ├── redis-master.infra (internal only)
 ├── (no RabbitMQ) - Mosuon does not use RabbitMQ; use Redis and direct DB-backed jobs
@@ -36,23 +36,23 @@ Point all subdomains to the cluster IP:
 
 ```dns
 ; Primary domain
-ultimatestats.co.ke.              A    207.180.237.35
+ultichange.org.              A    207.180.237.35
 
 ; Application domains
-ultimatestats.co.ke.              A    207.180.237.35
-api.ultimatestats.co.ke.          A    207.180.237.35
+ultichange.org.              A    207.180.237.35
+api.ultichange.org.          A    207.180.237.35
 
 ; Infrastructure domains
-argocd.ultimatestats.co.ke.       A    207.180.237.35
-grafana.ultimatestats.co.ke.      A    207.180.237.35
-analytics.ultimatestats.co.ke.    A    207.180.237.35
-prometheus.ultimatestats.co.ke.   A    207.180.237.35
+argocd.ultichange.org.       A    207.180.237.35
+grafana.ultichange.org.      A    207.180.237.35
+analytics.ultichange.org.    A    207.180.237.35
+prometheus.ultichange.org.   A    207.180.237.35
 ```
 
 ### Wildcard Record (Optional)
 
 ```dns
-*.ultimatestats.co.ke.            A    207.180.237.35
+*.ultichange.org.            A    207.180.237.35
 ```
 
 **Pros**:
@@ -66,10 +66,10 @@ prometheus.ultimatestats.co.ke.   A    207.180.237.35
 ### CNAME Records (Alternative)
 
 ```dns
-ultimatestats.co.ke.              CNAME  @
-api.ultimatestats.co.ke.          CNAME  @
-argocd.ultimatestats.co.ke.       CNAME  @
-grafana.ultimatestats.co.ke.      CNAME  @
+ultichange.org.              CNAME  @
+api.ultichange.org.          CNAME  @
+argocd.ultichange.org.       CNAME  @
+grafana.ultichange.org.      CNAME  @
 ```
 
 ## NGINX Ingress Controller
@@ -152,7 +152,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: admin@ultimatestats.co.ke
+    email: admin@ultichange.org
     privateKeySecretRef:
       name: letsencrypt-prod-key
     solvers:
@@ -167,7 +167,7 @@ metadata:
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
-    email: admin@ultimatestats.co.ke
+    email: admin@ultichange.org
     privateKeySecretRef:
       name: letsencrypt-staging-key
     solvers:
@@ -228,10 +228,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-      - ultimatestats.co.ke
+      - ultichange.org
       secretName: game-stats-ui-tls
   rules:
-    - host: ultimatestats.co.ke
+    - host: ultichange.org
       http:
         paths:
           - path: /
@@ -259,17 +259,17 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ultimatestats.co.ke"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ultichange.org"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-      - api.ultimatestats.co.ke
+      - api.ultichange.org
       secretName: game-stats-api-tls
   rules:
-    - host: api.ultimatestats.co.ke
+    - host: api.ultichange.org
       http:
         paths:
           - path: /
@@ -299,10 +299,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - argocd.ultimatestats.co.ke
+        - argocd.ultichange.org
       secretName: argocd-tls
   rules:
-    - host: argocd.ultimatestats.co.ke
+    - host: argocd.ultichange.org
       http:
         paths:
           - path: /
@@ -415,7 +415,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/ZONE_ID/dns_records" \
   -H "Content-Type: application/json" \
   --data '{
     "type": "A",
-    "name": "ultimatestats.co.ke",
+    "name": "ultichange.org",
     "content": "207.180.237.35",
     "ttl": 120,
     "proxied": false
@@ -433,7 +433,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/ZONE_ID/dns_records" \
 ```bash
 # Create hosted zone
 aws route53 create-hosted-zone \
-  --name ultimatestats.co.ke \
+  --name ultichange.org \
   --caller-reference "$(date +%s)"
 
 # Add A record
@@ -443,7 +443,7 @@ aws route53 change-resource-record-sets \
     "Changes": [{
       "Action": "CREATE",
       "ResourceRecordSet": {
-        "Name": "ultimatestats.co.ke",
+        "Name": "ultichange.org",
         "Type": "A",
         "TTL": 300,
         "ResourceRecords": [{"Value": "207.180.237.35"}]
@@ -464,26 +464,26 @@ kubectl get pods -n ingress-nginx
 kubectl get ingress -A
 
 # Test HTTP redirect
-curl -I http://ultimatestats.co.ke
+curl -I http://ultichange.org
 
 # Test HTTPS
-curl -I https://ultimatestats.co.ke
+curl -I https://ultichange.org
 
 # Test with specific host header (before DNS)
-curl -H "Host: ultimatestats.co.ke" http://207.180.237.35:30080
+curl -H "Host: ultichange.org" http://207.180.237.35:30080
 ```
 
 ### Certificate Validation
 
 ```bash
 # Check certificate expiry
-openssl s_client -connect ultimatestats.co.ke:443 -servername ultimatestats.co.ke | openssl x509 -noout -dates
+openssl s_client -connect ultichange.org:443 -servername ultichange.org | openssl x509 -noout -dates
 
 # Verify certificate chain
-openssl s_client -connect ultimatestats.co.ke:443 -servername ultimatestats.co.ke -showcerts
+openssl s_client -connect ultichange.org:443 -servername ultichange.org -showcerts
 
 # Check SSL Labs rating
-# Visit: https://www.ssllabs.com/ssltest/analyze.html?d=ultimatestats.co.ke
+# Visit: https://www.ssllabs.com/ssltest/analyze.html?d=ultichange.org
 ```
 
 ## Monitoring & Metrics
@@ -516,10 +516,10 @@ Key panels:
 
 ```bash
 # Check DNS propagation
-dig ultimatestats.co.ke +short
+dig ultichange.org +short
 
 # Check from external resolver
-dig @8.8.8.8 ultimatestats.co.ke +short
+dig @8.8.8.8 ultichange.org +short
 
 # Flush local DNS cache (client)
 sudo systemd-resolve --flush-caches
@@ -538,7 +538,7 @@ kubectl describe certificaterequest -n mosuon
 kubectl get challenges -A
 
 # Manually verify challenge
-curl http://ultimatestats.co.ke/.well-known/acme-challenge/TOKEN
+curl http://ultichange.org/.well-known/acme-challenge/TOKEN
 ```
 
 ### 502 Bad Gateway

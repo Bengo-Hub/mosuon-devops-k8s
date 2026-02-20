@@ -54,10 +54,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - grafana.ultimatestats.co.ke
+        - grafana.ultichange.org
       secretName: grafana-tls
   rules:
-    - host: grafana.ultimatestats.co.ke
+    - host: grafana.ultichange.org
       http:
         paths:
           - path: /

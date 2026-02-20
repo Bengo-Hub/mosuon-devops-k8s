@@ -371,7 +371,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
 echo
 
 # Access UI
-open https://argocd.ultimatestats.co.ke
+open https://argocd.ultichange.org
 # Username: admin
 # Password: [from above command]
 ```
@@ -383,7 +383,7 @@ open https://argocd.ultimatestats.co.ke
 brew install argocd
 
 # Login
-argocd login argocd.ultimatestats.co.ke
+argocd login argocd.ultichange.org
 # Username: admin
 # Password: [admin password]
 
@@ -403,7 +403,7 @@ kubectl get secret -n infra grafana-admin-credentials \
 echo
 
 # Access UI
-open https://grafana.ultimatestats.co.ke
+open https://grafana.ultichange.org
 # Username: admin
 # Password: [from above command]
 ```
