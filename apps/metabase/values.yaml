@@ -23,17 +23,6 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 85
 
-# VPA Configuration (Vertical Pod Autoscaler) - Recommended for Metabase
-verticalPodAutoscaling:
-  enabled: true
-  updateMode: "Off"  # Recommendation mode - Metabase needs stable resources
-  recommendationMode: true  # Forces Off mode for safety
-  minCPU: 150m
-  maxCPU: 1500m
-  minMemory: 512Mi
-  maxMemory: 2Gi
-  controlledResources: ["cpu", "memory"]
-  controlledValues: RequestsAndLimits
 
 # ============================================================================
 # SERVICE CONFIGURATION
