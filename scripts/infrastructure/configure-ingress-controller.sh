@@ -201,3 +201,33 @@ if [ "${SERVICE_TYPE}" = "NodePort" ]; then
 
     log_success "Applied iptables PREROUTING+OUTPUT redirects for ${HTTP_PORT}/${HTTPS_PORT} (persisted if possible)"
 fi
+
+# =============================================================================
+# KUBERNETES NETWORKING: UFW FORWARD + POD MASQUERADE (required for all setups)
+# =============================================================================
+log_section "Ensuring Kubernetes pod-to-internet routing"
+
+# UFW DEFAULT_FORWARD_POLICY must be ACCEPT, not DROP.
+# If DROP, all Kubernetes pod traffic is silently blocked — pods cannot reach
+# Let's Encrypt (certs fail), Docker Hub (ImagePullBackOff), or any external service.
+if [ -f /etc/default/ufw ]; then
+    if grep -q 'DEFAULT_FORWARD_POLICY="DROP"' /etc/default/ufw; then
+        sudo sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
+        log_success "UFW DEFAULT_FORWARD_POLICY changed DROP -> ACCEPT (required for K8s pods)"
+    else
+        log_success "UFW DEFAULT_FORWARD_POLICY is already ACCEPT"
+    fi
+fi
+# Apply immediately without waiting for UFW reload
+sudo iptables -P FORWARD ACCEPT 2>/dev/null || true
+
+# MASQUERADE: SNAT pod subnet traffic heading to the internet.
+# Calico sets natOutgoing=true on IPPool but an explicit rule ensures correctness.
+# Pod CIDR: 192.168.0.0/16 (Calico default)
+sudo iptables -t nat -C POSTROUTING -s 192.168.0.0/16 ! -d 192.168.0.0/16 -j MASQUERADE 2>/dev/null || \
+    sudo iptables -t nat -A POSTROUTING -s 192.168.0.0/16 ! -d 192.168.0.0/16 -j MASQUERADE
+log_success "Pod egress MASQUERADE rule ensured (pod-CIDR -> internet)"
+
+# Persist all iptables rules
+sudo netfilter-persistent save >/dev/null 2>&1 || true
+log_success "FORWARD ACCEPT + MASQUERADE applied and persisted"
