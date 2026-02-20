@@ -85,7 +85,10 @@ env:
         key: DATABASE_URL
   # Redis connection
   - name: REDIS_URL
-    value: redis://redis-master.infra.svc.cluster.local:6379/0
+    valueFrom:
+      secretKeyRef:
+        name: game-stats-api-secrets
+        key: REDIS_URL
   - name: REDIS_PASSWORD
     valueFrom:
       secretKeyRef:

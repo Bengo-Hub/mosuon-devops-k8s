@@ -155,8 +155,11 @@ else
 fi
 
 # Construct Redis URL
+# Ensure password is included if available
 if [[ -n "$REDIS_PASSWORD" ]]; then
-    REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/0"
+    # URL encode the password for the Redis URL
+    ENCODED_REDIS_PASSWORD=$(echo -n "$REDIS_PASSWORD" | python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read(), safe=""))' 2>/dev/null || echo "$REDIS_PASSWORD")
+    REDIS_URL="redis://:${ENCODED_REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/0"
 else
     REDIS_URL="redis://${REDIS_HOST}:${REDIS_PORT}/0"
 fi
@@ -164,7 +167,12 @@ fi
 # Create the secret
 log_info "Creating Kubernetes secret..."
 
-JWT_SECRET_VAL="${JWT_SECRET:-super-secret-jwt-token-for-mosuon-prod}"
+# JWT Secret - Fail if not provided in production
+JWT_SECRET_VAL="${JWT_SECRET:-}"
+if [[ -z "$JWT_SECRET_VAL" ]]; then
+    log_error "JWT_SECRET is required but not provided in environment."
+    exit 1
+fi
 
 kubectl create secret generic "${SECRET_NAME}" \
     --namespace="${NAMESPACE}" \
