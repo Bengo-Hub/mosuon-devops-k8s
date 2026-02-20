@@ -34,11 +34,22 @@ spec:
         grafana:
           enabled: true
           adminPassword: "changeme"
+          podSecurityContext:
+            fsGroup: 472
+            runAsGroup: 472
+            runAsUser: 472
           persistence:
             enabled: true
             size: 10Gi
             accessModes:
               - ReadWriteOnce
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           ingress:
             enabled: true
             ingressClassName: nginx
