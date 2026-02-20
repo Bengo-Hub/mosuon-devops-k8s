@@ -81,6 +81,8 @@ if command -v ufw >/dev/null 2>&1; then
   ufw allow 6444/tcp || true
   ufw allow 2379:2380/tcp || true
   ufw allow 10250/tcp || true
+  # CRITICAL FOR CALICO/KUBERNETES CNI
+  sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw || true
   ufw --force enable || true
 fi
 
