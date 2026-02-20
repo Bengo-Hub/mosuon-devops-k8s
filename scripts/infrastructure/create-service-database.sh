@@ -3,7 +3,6 @@
 # This script creates a database for a specific service using the common admin user
 #
 # Usage:
-# Usage:
 #   SERVICE_DB_NAME=game_stats ./scripts/infrastructure/create-service-database.sh
 #   APP_NAME=game-stats-api ./scripts/infrastructure/create-service-database.sh
 #   NAMESPACE=mosuon ./scripts/infrastructure/create-service-database.sh
@@ -59,14 +58,16 @@ if [[ -z "$ADMIN_PASSWORD" ]]; then
     log_info "Retrieving PostgreSQL admin password from Kubernetes secret..."
     
     if kubectl -n "$PG_NAMESPACE" get secret postgresql >/dev/null 2>&1; then
-        # Try to get admin_user password (created by chart)
+        # Try to get admin-user-password (created by chart)
         ADMIN_PASSWORD=$(kubectl -n "$PG_NAMESPACE" get secret postgresql -o jsonpath="{.data.admin-user-password}" 2>/dev/null | base64 -d || true)
         
         # Fallback to postgres superuser password if admin_user password not found
         if [[ -z "$ADMIN_PASSWORD" ]]; then
             ADMIN_PASSWORD=$(kubectl -n "$PG_NAMESPACE" get secret postgresql -o jsonpath="{.data.postgres-password}" 2>/dev/null | base64 -d || true)
-            ADMIN_USER="postgres"
-            log_warning "Using postgres superuser (admin_user password not found in secret)"
+            if [[ -n "$ADMIN_PASSWORD" ]]; then
+                ADMIN_USER="postgres"
+                log_warning "Using postgres superuser (admin-user-password key not found)"
+            fi
         fi
     fi
     
@@ -75,6 +76,10 @@ if [[ -z "$ADMIN_PASSWORD" ]]; then
         log_error "Set POSTGRES_ADMIN_PASSWORD or POSTGRES_PASSWORD environment variable, or ensure PostgreSQL secret exists"
         exit 1
     fi
+else
+    # Password was provided, but we should still check if 'admin_user' exists
+    # If not, we'll try 'postgres' as a fallback if the first connection fails
+    log_info "Admin password provided via environment"
 fi
 
 log_info "Creating database for service: ${SERVICE_DB_NAME}"
@@ -122,23 +127,43 @@ fi
 
 log_info "Found PostgreSQL pod: ${PG_POD}"
 
+# Function to run psql command with error handling and admin user fallback
+run_psql() {
+    local db=$1
+    local cmd=$2
+    local silent=${3:-false}
+    
+    # Try with ADMIN_USER first
+    if kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
+        env PGPASSWORD="$ADMIN_PASSWORD" \
+        psql -h localhost -U "$ADMIN_USER" -d "$db" -c "$cmd" 2>/dev/null; then
+        return 0
+    fi
+    
+    # Fallback to 'postgres' user if ADMIN_USER failed
+    if [[ "$ADMIN_USER" != "postgres" ]]; then
+        log_info "Retrying command with 'postgres' superuser..."
+        if kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
+            env PGPASSWORD="$ADMIN_PASSWORD" \
+            psql -h localhost -U "postgres" -d "$db" -c "$cmd" 2>&1; then
+            ADMIN_USER="postgres" # Sticky change for the rest of the script
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
 # Create database if not exists
 log_info "Creating database '${SERVICE_DB_NAME}'..."
-kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
-    env PGPASSWORD="$ADMIN_PASSWORD" \
-    psql -h localhost -U "$ADMIN_USER" -d postgres -tc "
-    SELECT 1 FROM pg_database WHERE datname = '${SERVICE_DB_NAME}'" | grep -q 1 || \
-kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
-    env PGPASSWORD="$ADMIN_PASSWORD" \
-    psql -h localhost -U "$ADMIN_USER" -d postgres -c "CREATE DATABASE ${SERVICE_DB_NAME};" || {
-    log_warning "Database '${SERVICE_DB_NAME}' may already exist"
+run_psql "postgres" "SELECT 1 FROM pg_database WHERE datname = '${SERVICE_DB_NAME}'" true | grep -q 1 || \
+run_psql "postgres" "CREATE DATABASE ${SERVICE_DB_NAME};" || {
+    log_warning "Database '${SERVICE_DB_NAME}' may already exist or creation failed"
 }
 
 # Create user if not exists (using master password for consistency)
 log_info "Creating user '${SERVICE_DB_USER}' with master password..."
-kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
-    env PGPASSWORD="$ADMIN_PASSWORD" \
-    psql -h localhost -U "$ADMIN_USER" -d postgres -c "
+run_psql "postgres" "
     DO \$\$
     BEGIN
         IF NOT EXISTS (SELECT FROM pg_user WHERE usename = '${SERVICE_DB_USER}') THEN
@@ -149,48 +174,35 @@ kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
         END IF;
     END
     \$\$;" || {
-    log_warning "User '${SERVICE_DB_USER}' may already exist"
+    log_warning "User '${SERVICE_DB_USER}' may already exist or creation failed"
 }
 
 # Grant privileges on database
 log_info "Granting privileges on database..."
-kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
-    env PGPASSWORD="$ADMIN_PASSWORD" \
-    psql -h localhost -U "$ADMIN_USER" -d postgres -c "
+run_psql "postgres" "
     GRANT ALL PRIVILEGES ON DATABASE ${SERVICE_DB_NAME} TO ${SERVICE_DB_USER};
     ALTER DATABASE ${SERVICE_DB_NAME} OWNER TO ${SERVICE_DB_USER};" || true
 
 # Grant schema privileges
 log_info "Granting schema privileges..."
-kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
-    env PGPASSWORD="$ADMIN_PASSWORD" \
-    psql -h localhost -U "$ADMIN_USER" -d "${SERVICE_DB_NAME}" -c "
+run_psql "${SERVICE_DB_NAME}" "
     GRANT ALL ON SCHEMA public TO ${SERVICE_DB_USER};
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${SERVICE_DB_USER};
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${SERVICE_DB_USER};" || true
 
-# Install PostgreSQL extensions if requested (idempotent)
-# ENABLE_PGVECTOR=true to install pgvector extension for AI/embedding workloads
+# Install PostgreSQL extensions
 if [[ "${ENABLE_PGVECTOR:-false}" == "true" ]]; then
     log_info "Installing pgvector extension for database '${SERVICE_DB_NAME}'..."
-    kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
-        env PGPASSWORD="$ADMIN_PASSWORD" \
-        psql -h localhost -U "$ADMIN_USER" -d "${SERVICE_DB_NAME}" -c \
-        "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null && \
+    run_psql "${SERVICE_DB_NAME}" "CREATE EXTENSION IF NOT EXISTS vector;" && \
         log_success "pgvector extension installed" || \
         log_warning "pgvector extension may already exist or is not available"
 fi
 
-# Install other common extensions (idempotent)
-# uuid-ossp for UUID generation
 log_info "Installing uuid-ossp extension..."
-kubectl -n "$PG_NAMESPACE" exec "$PG_POD" -c postgresql -- \
-    env PGPASSWORD="$ADMIN_PASSWORD" \
-    psql -h localhost -U "$ADMIN_USER" -d "${SERVICE_DB_NAME}" -c \
-    "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" 2>/dev/null || true
+run_psql "${SERVICE_DB_NAME}" "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || \
+    log_warning "uuid-ossp extension installation failed"
 
 log_success "Database '${SERVICE_DB_NAME}' and user '${SERVICE_DB_USER}' created successfully"
 log_info "Connection string: postgresql://${SERVICE_DB_USER}:<POSTGRES_PASSWORD>@${PG_HOST}:${PG_PORT}/${SERVICE_DB_NAME}"
 log_info "User password: Uses POSTGRES_PASSWORD (master password) for consistency"
 log_info "All service database users share the master password for simplified management"
-
