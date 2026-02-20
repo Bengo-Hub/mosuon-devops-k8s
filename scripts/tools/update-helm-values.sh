@@ -15,6 +15,15 @@ NEW_TAG=$2
 
 # Determine the root of the devops repo (two levels up from scripts/tools)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# Robust path handling for Windows/CI
+if [[ "$REPO_ROOT" == *"d:/Projects"* && ! -d "$REPO_ROOT" ]]; then
+    # Fallback if local Windows path is present but invalid (CI environment)
+    REPO_ROOT=$(pwd)
+    while [[ "$REPO_ROOT" != "/" && ! -d "$REPO_ROOT/apps" ]]; do
+        REPO_ROOT=$(dirname "$REPO_ROOT")
+    done
+fi
 VALUES_FILE="${REPO_ROOT}/apps/${APP_NAME}/values.yaml"
 
 if [ ! -f "$VALUES_FILE" ]; then
@@ -37,6 +46,11 @@ if grep -q "tag: \"$NEW_TAG\"" "$VALUES_FILE"; then
     if [ -d "${REPO_ROOT}/.git" ]; then
         echo "Committing and pushing changes to devops repo..."
         cd "$REPO_ROOT"
+        
+        # Ensure git identity is set for this repo
+        git config user.email "${GIT_EMAIL:-dev@ultistats.ultichange.org}"
+        git config user.name "${GIT_USER:-Game Stats Bot}"
+        
         git add "$VALUES_FILE"
         git commit -m "chore(deploy): update $APP_NAME image tag to $NEW_TAG" || echo "No changes to commit"
         git push origin master || echo "Warning: Failed to push changes to origin"
