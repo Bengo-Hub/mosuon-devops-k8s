@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/Bengo-Hub/mosuon-devops-k8s.git
-    targetRevision: main
+    targetRevision: master
     path: manifests/databases
     directory:
       include: redis-statefulset.yaml
