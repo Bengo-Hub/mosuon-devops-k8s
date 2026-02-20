@@ -77,12 +77,21 @@ env:
     value: "3000"
   # Next.js configuration
   - name: NEXT_PUBLIC_API_URL
-    value: "https://utistatsapi.ultichange.org"
+    valueFrom:
+      secretKeyRef:
+        name: game-stats-ui-secrets
+        key: NEXT_PUBLIC_API_URL
   - name: NEXT_PUBLIC_WS_URL
-    value: "wss://ultistats.ultichange.org"
+    valueFrom:
+      secretKeyRef:
+        name: game-stats-ui-secrets
+        key: NEXT_PUBLIC_WS_URL
   # Metabase Analytics
   - name: NEXT_PUBLIC_ANALYTICS_URL
-    value: "https://analytics.ultichange.org"
+    valueFrom:
+      secretKeyRef:
+        name: game-stats-ui-secrets
+        key: NEXT_PUBLIC_ANALYTICS_URL
   # PWA and offline settings
   - name: NEXT_PUBLIC_ENABLE_PWA
     value: "true"
