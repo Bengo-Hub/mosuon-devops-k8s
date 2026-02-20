@@ -15,16 +15,6 @@ image:
 # ============================================================================
 replicaCount: 1
 
-# HPA Configuration - Metabase typically runs as single instance
-autoscaling:
-  enabled: false  # Disabled - Metabase is stateful and best run as single instance
-  minReplicas: 1
-  maxReplicas: 2
-  targetCPUUtilizationPercentage: 80
-  targetMemoryUtilizationPercentage: 85
-
-
-# ============================================================================
 # SERVICE CONFIGURATION
 # ============================================================================
 service:
