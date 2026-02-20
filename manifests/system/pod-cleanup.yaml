@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pod-cleanup-sa
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pod-cleanup-role
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pod-cleanup-rolebinding
+subjects:
+- kind: ServiceAccount
+  name: pod-cleanup-sa
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: pod-cleanup-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-cleanup
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pod-cleanup
+  template:
+    metadata:
+      labels:
+        app: pod-cleanup
+    spec:
+      serviceAccountName: pod-cleanup-sa
+      containers:
+      - name: cleanup-agent
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Starting pod cleanup agent..."
+          while true; do
+            # Find pods in failed states (CrashLoopBackOff, ImagePullBackOff, Error, etc.)
+            FAILED_PODS=$(kubectl get pods -A -o json | jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting.reason == "CrashLoopBackOff" or .status.containerStatuses[]?.state.waiting.reason == "ImagePullBackOff" or .status.phase == "Failed" or .status.containerStatuses[]?.state.terminated.reason == "Error") | "\(.metadata.namespace)/\(.metadata.name)"' | sort -u)
+            
+            if [ -n "$FAILED_PODS" ]; then
+              for pod_path in $FAILED_PODS; do
+                NS=$(echo $pod_path | cut -d'/' -f1)
+                NAME=$(echo $pod_path | cut -d'/' -f2)
+                echo "Deleting failed pod: $NS/$NAME"
+                kubectl delete pod "$NAME" -n "$NS" --grace-period=0 --force
+              done
+            fi
+            sleep 30
+          done
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
