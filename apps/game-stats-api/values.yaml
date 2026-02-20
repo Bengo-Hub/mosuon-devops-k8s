@@ -126,6 +126,8 @@ env:
     value: "true"
   - name: FIXTURES_DIR
     value: "./scripts/fixtures"
+  - name: SWAGGER_HOST
+    value: "ultistatsapi.ultichange.org"
 # ============================================================================
 # RESOURCE LIMITS
 # ============================================================================
