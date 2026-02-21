@@ -132,11 +132,19 @@ resources:
 # ============================================================================
 healthCheck:
   enabled: true
+  startup:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 20
   liveness:
     httpGet:
       path: /api/health
       port: 3000
-    initialDelaySeconds: 300
+    initialDelaySeconds: 30
     periodSeconds: 30
     timeoutSeconds: 10
     failureThreshold: 5
