@@ -132,7 +132,7 @@ resources:
 # ============================================================================
 healthCheck:
   enabled: true
-  livenessProbe:
+  liveness:
     httpGet:
       path: /api/health
       port: 3000
@@ -140,7 +140,7 @@ healthCheck:
     periodSeconds: 30
     timeoutSeconds: 10
     failureThreshold: 5
-  readinessProbe:
+  readiness:
     httpGet:
       path: /api/health
       port: 3000
