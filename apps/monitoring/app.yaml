@@ -33,6 +33,8 @@ spec:
 
         grafana:
           enabled: true
+          initChownData:
+            enabled: false
           adminPassword: "changeme"
           podSecurityContext:
             fsGroup: 472

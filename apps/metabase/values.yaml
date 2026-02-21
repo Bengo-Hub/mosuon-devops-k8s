@@ -136,7 +136,7 @@ healthCheck:
     httpGet:
       path: /api/health
       port: 3000
-    initialDelaySeconds: 120
+    initialDelaySeconds: 300
     periodSeconds: 30
     timeoutSeconds: 10
     failureThreshold: 5
