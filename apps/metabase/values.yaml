@@ -121,10 +121,10 @@ env:
 # - Embedding API
 resources:
   requests:
-    memory: "512Mi"
-    cpu: "150m"
+    memory: "768Mi"
+    cpu: "300m"
   limits:
-    memory: "1536Mi"
+    memory: "1.5Gi"
     cpu: "1000m"
 
 # ============================================================================

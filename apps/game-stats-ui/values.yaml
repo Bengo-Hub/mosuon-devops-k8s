@@ -16,7 +16,7 @@ image:
 replicaCount: 1
 autoscaling:
   enabled: true
-  minReplicas: 1
+  minReplicas: 2
   maxReplicas: 3
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 75
@@ -102,10 +102,10 @@ env:
 # ============================================================================
 resources:
   requests:
-    memory: "128Mi"
-    cpu: "50m"
+    memory: "256Mi"
+    cpu: "100m"
   limits:
-    memory: "512Mi"
+    memory: "768Mi"
     cpu: "500m"
 # ============================================================================
 # HEALTH CHECKS

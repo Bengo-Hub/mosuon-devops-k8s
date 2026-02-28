@@ -19,18 +19,18 @@ primary:
     pullPolicy: IfNotPresent
   resources:
     requests:
-      memory: "2Gi"
-      cpu: "500m"
+      memory: "1Gi"
+      cpu: "300m"
     limits:
-      memory: "4Gi"
-      cpu: "1500m"
+      memory: "2Gi"
+      cpu: "1000m"
   priorityClassName: db-critical
   persistence:
     enabled: true
     size: 20Gi
     storageClass: ""
   extendedConfiguration: |
-    max_connections = 150
+    max_connections = 100
     shared_buffers = 512MB
     effective_cache_size = 1.5GB
     work_mem = 4MB
