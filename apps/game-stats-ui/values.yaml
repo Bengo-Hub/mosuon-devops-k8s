@@ -6,7 +6,7 @@ fullnameOverride: game-stats-ui
 # ============================================================================
 image:
   repository: docker.io/codevertex/game-stats-ui
-  tag: "fda72f8b"
+  tag: "00eb5fcc"
   pullPolicy: Always
   pullSecrets:
     - name: registry-credentials
