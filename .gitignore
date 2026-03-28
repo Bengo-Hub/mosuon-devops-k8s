@@ -1,0 +1,7 @@
+# Secrets
+KubeSecrets/
+.env
+.env.*
+!.env.example
+*.pem
+*-key.pem
